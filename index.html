@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <!-- Meta tag essencial para mobile: previne zoom e travamento de escala -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Gunbound Web Simulator</title>
     
@@ -10,106 +11,119 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;600;700&display=swap');
 
+        /* Removemos comportamentos padrão que atrapalham o "arrastar" em mobile/desktop */
         body {
             font-family: 'Inter', sans-serif;
-            /* Previne seleção de texto acidental ao arrastar o mapa */
             user-select: none; 
             -webkit-user-select: none;
+            touch-action: none; /* Previne scroll nativo no mobile para usarmos os pointer events */
+            background-color: #000;
         }
 
         .font-retro {
             font-family: 'VT323', monospace;
-            letter-spacing: 1px;
         }
 
-        /* Esconde a barra de rolagem para um visual mais limpo e imersivo (estilo jogo) */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1f2937; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #4b5563; 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #6b7280; 
-        }
-
-        /* Fallback: Padrão visual para quando a imagem de Fundo não carregar */
+        /* Fallbacks visuais (sem textos, apenas uma malha/cor para debug caso imagens falhem) */
         .fallback-fundo {
             background-color: #0f172a;
-            background-image: radial-gradient(#334155 1px, transparent 1px);
-            background-size: 20px 20px;
+            background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
         }
 
-        /* Fallback: Padrão visual para quando a imagem do Mapa não carregar */
         .fallback-mapa {
-            background-color: rgba(34, 197, 94, 0.1); /* Verde translúcido */
-            border: 2px dashed rgba(34, 197, 94, 0.5);
-            /* Grid imitando blocos de terra */
-            background-image: linear-gradient(rgba(34, 197, 94, 0.2) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(34, 197, 94, 0.2) 1px, transparent 1px);
-            background-size: 50px 50px;
+            background-color: transparent;
+            background-image: linear-gradient(rgba(34, 197, 94, 0.05) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(34, 197, 94, 0.05) 1px, transparent 1px);
+            background-size: 100px 100px;
         }
 
-        /* Classes para controle de cursor durante o arrasto */
-        .grab { cursor: grab; }
-        .grabbing { cursor: grabbing !important; }
+        /* Classes utilitárias do cursor da Câmera */
+        .cursor-grab { cursor: grab; }
+        .cursor-grabbing { cursor: grabbing !important; }
+
+        /* Estilo do select (combobox) customizado pro estilo retrô/escuro */
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
     </style>
 </head>
-<body class="bg-gray-950 text-white h-screen w-screen overflow-hidden flex flex-col relative">
+<!-- Usamos h-[100dvh] que respeita a barra de navegação real dos celulares -->
+<body class="w-screen h-[100dvh] overflow-hidden flex flex-col">
 
-    <div class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-[90%] max-w-md bg-gray-900/80 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-2xl shadow-black/50 p-3 flex flex-col gap-3 transition-all">
+    <main id="viewport-container" class="flex-1 relative overflow-hidden bg-gray-950 cursor-grab w-full">
         
-        <!-- Cabeçalho do HUD -->
-        <div class="flex justify-between items-center px-2">
-            <div>
-                <h1 class="font-retro text-2xl text-amber-400 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">GB WEB SIM</h1>
-                <p id="map-name-display" class="text-xs text-gray-400 uppercase tracking-widest">Carregando...</p>
+        <!-- Câmera controlada via Transformação 2D (Translação e Escala) -->
+        <div id="camera" class="absolute top-0 left-0 origin-top-left will-change-transform">
+            
+            <!-- Container do Mapa (Tamanho Fixo: Ex: 1800x1800) -->
+            <div id="map-container" class="relative">
+                
+                <!-- Camada de Fundo -->
+                <div id="layer-fundo" class="absolute bg-no-repeat bg-center bg-cover fallback-fundo shadow-2xl"></div>
+
+                <!-- Camada do Terreno Principal (Lado A ou B) -->
+                <div id="layer-mapa" class="absolute inset-0 bg-no-repeat bg-center bg-contain fallback-mapa pointer-events-none"></div>
+                
             </div>
             
-            <!-- Miniatura do Mapa -->
-            <div id="mini-map-container" class="h-[47px] w-[211px] bg-gray-800 rounded border border-gray-700 flex items-center justify-center overflow-hidden scale-75 origin-right">
-                <div id="mini-map-img" class="w-full h-full bg-cover bg-center text-[10px] text-gray-500 flex items-center justify-center">Miniatura</div>
-            </div>
         </div>
-
-        <!-- Controles do Mapa -->
-        <div class="flex gap-2 w-full">
-            <button id="btn-lado-a" class="flex-1 py-2 px-4 rounded-xl font-bold text-sm transition-all shadow-inner active:scale-95 bg-blue-600 text-white hover:bg-blue-500 border-b-4 border-blue-800">
-                Lado A
-            </button>
-            <button id="btn-lado-b" class="flex-1 py-2 px-4 rounded-xl font-bold text-sm transition-all shadow-inner active:scale-95 bg-gray-700 text-gray-300 hover:bg-gray-600 border-b-4 border-gray-800">
-                Lado B
-            </button>
-        </div>
-        <div class="text-center text-[10px] text-gray-500">Arraste para navegar pelo mapa</div>
-    </div>
-
-    <main id="viewport" class="flex-1 w-full h-full overflow-auto grab relative">
         
-        <!-- Container principal do mapa (Tamanho dinâmico via JS) -->
-        <div id="map-container" class="relative overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.8)] mx-auto my-auto origin-center">
-            
-            <!-- Camada de Fundo (Background) -->
-            <div id="layer-fundo" class="absolute inset-0 fallback-fundo bg-no-repeat bg-center m-auto flex items-center justify-center text-gray-700 text-2xl font-bold">
-                <span class="bg-gray-900/50 px-4 py-2 rounded">FUNDO: 1300x1300</span>
-            </div>
-
-            <!-- Camada do Mapa (Lado A / Lado B) -->
-            <div id="layer-mapa" class="absolute inset-0 fallback-mapa bg-no-repeat bg-center bg-contain m-auto flex items-center justify-center text-green-500/50 text-4xl font-bold pointer-events-none">
-                <span class="bg-gray-900/80 px-6 py-3 rounded border border-green-500/30">MAPA: 1800x1800</span>
-            </div>
-            
-        </div>
     </main>
 
+    <footer class="h-[120px] shrink-0 bg-gradient-to-b from-gray-800 to-gray-950 border-t-[3px] border-gray-600 shadow-[0_-5px_15px_rgba(0,0,0,0.8)] relative z-50 flex items-center px-4 md:px-8 justify-between">
+        
+        <!-- Esquerda: Seletor de Lado -->
+        <div class="flex flex-col gap-1 z-10 w-32">
+            <label for="side-selector" class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Lado do Mapa</label>
+            <div class="relative">
+                <select id="side-selector" class="w-full bg-gray-900 border border-gray-600 text-amber-500 font-bold py-2 pl-3 pr-8 rounded focus:outline-none focus:border-amber-500 shadow-inner cursor-pointer transition-colors hover:bg-gray-800">
+                    <option value="A">Lado A</option>
+                    <option value="B">Lado B</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Centro: Placeholder Barra de Força / Ângulo / Vento -->
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            
+            <div class="bg-gray-900/80 border border-gray-700/80 rounded-xl p-3 flex flex-col gap-2 items-center w-[250px] md:w-[400px] shadow-lg backdrop-blur-sm">
+                
+                <!-- Info Superior do HUD central -->
+                <div class="w-full flex justify-between px-2 text-[10px] text-gray-500 font-bold uppercase">
+                    <span class="flex items-center gap-1"><div class="w-2 h-2 bg-blue-500 rounded-full"></div> Ang: 45°</span>
+                    <span class="flex items-center gap-1 text-green-400"><div class="w-2 h-2 bg-green-500 rounded-full"></div> Vento: 12</span>
+                </div>
+
+                <!-- Barra de Força Mockada -->
+                <div class="w-full h-4 bg-gray-950 rounded-full overflow-hidden border border-gray-800 relative">
+                    <div class="h-full bg-gradient-to-r from-red-600 via-orange-500 to-yellow-400 w-1/3"></div>
+                    <!-- Marcadores da barra -->
+                    <div class="absolute inset-0 flex justify-between px-[10%]">
+                        <div class="w-px h-full bg-gray-500/50"></div>
+                        <div class="w-px h-full bg-gray-500/50"></div>
+                        <div class="w-px h-full bg-gray-500/50"></div>
+                    </div>
+                </div>
+
+                <div class="text-[10px] text-gray-600 font-retro tracking-widest">PLACEHOLDER UI</div>
+            </div>
+
+        </div>
+        
+        <!-- Direita: Reservado para Itens (Slot vazio p/ manter alinhamento) -->
+        <div class="w-32"></div>
+        
+    </footer>
+
     <script>
-        // Base de dados fornecida
-        const mapDatabase = {
+        // Dados do JSON de entrada
+        const mapData = {
             "mapas": [
                 {
                     "id": "adiumroot",
@@ -128,118 +142,161 @@
             ]
         };
 
-        // Estado da aplicação
-        let currentMap = mapDatabase.mapas[0];
-        let currentSide = 'A';
+        const currentMap = mapData.mapas[0];
 
-        // Elementos do DOM
-        const viewport = document.getElementById('viewport');
+        // Elementos DOM
+        const viewport = document.getElementById('viewport-container');
+        const camera = document.getElementById('camera');
         const mapContainer = document.getElementById('map-container');
         const layerFundo = document.getElementById('layer-fundo');
         const layerMapa = document.getElementById('layer-mapa');
-        const btnLadoA = document.getElementById('btn-lado-a');
-        const btnLadoB = document.getElementById('btn-lado-b');
-        const mapNameDisplay = document.getElementById('map-name-display');
-        const miniMapImg = document.getElementById('mini-map-img');
+        const sideSelector = document.getElementById('side-selector');
 
-        function initializeMap() {
-            // Configurar tamanhos do container do mapa (baseado no maior tamanho, que é o mapa em si)
+        // Estado da Câmera
+        let cameraScale = 1;
+        let cameraX = 0;
+        let cameraY = 0;
+
+        // Estado de Interação
+        let isDragging = false;
+        let startPointerX = 0;
+        let startPointerY = 0;
+        let initialCameraX = 0;
+        let initialCameraY = 0;
+
+        function initMap() {
+            // Configura o tamanho base (raw) do mapa
             mapContainer.style.width = `${currentMap.largura}px`;
             mapContainer.style.height = `${currentMap.altura}px`;
 
-            // Configurar tamanho e imagem do fundo (centralizado no container maior)
+            // Configura a camada de Fundo (Centralizando-a em relação ao mapa de 1800x1800)
             layerFundo.style.width = `${currentMap.fundoLargura}px`;
             layerFundo.style.height = `${currentMap.fundoAltura}px`;
+            layerFundo.style.left = `${(currentMap.largura - currentMap.fundoLargura) / 2}px`;
+            layerFundo.style.top = `${(currentMap.altura - currentMap.fundoAltura) / 2}px`;
             layerFundo.style.backgroundImage = `url('${currentMap.fundo}')`;
 
-            // O mapa em si ocupará todo o container
-            layerMapa.style.width = `${currentMap.largura}px`;
-            layerMapa.style.height = `${currentMap.altura}px`;
+            // O mapa de terreno ocupa todo o container (1800x1800)
+            updateSideImage();
 
-            // Configurar UI
-            mapNameDisplay.innerText = currentMap.nome;
-            miniMapImg.style.backgroundImage = `url('${currentMap.miniatura}')`;
-            miniMapImg.innerHTML = ""; // Limpa o texto de fallback se tiver imagem (o visual fica via fallback css)
-
-            updateSide();
+            // Realiza o primeiro cálculo de escala e limites
+            recalculateViewport();
             
-            // Aguarda um pequeno delay para a renderização do DOM antes de centralizar a câmera
-            setTimeout(centerViewport, 100);
+            // Inicia com a câmera centralizada no mapa
+            centerCamera();
         }
 
-        function updateSide() {
-            const imagePath = currentSide === 'A' ? currentMap.ladoA : currentMap.ladoB;
-            layerMapa.style.backgroundImage = `url('${imagePath}')`;
+        function updateSideImage() {
+            const side = sideSelector.value;
+            layerMapa.style.backgroundImage = `url('${side === 'A' ? currentMap.ladoA : currentMap.ladoB}')`;
+        }
 
-            // Atualizar estilização dos botões
-            if (currentSide === 'A') {
-                // Ativa A
-                btnLadoA.className = "flex-1 py-2 px-4 rounded-xl font-bold text-sm transition-all shadow-inner active:scale-95 bg-blue-600 text-white hover:bg-blue-500 border-b-4 border-blue-800";
-                // Desativa B
-                btnLadoB.className = "flex-1 py-2 px-4 rounded-xl font-bold text-sm transition-all shadow-inner active:scale-95 bg-gray-700 text-gray-300 hover:bg-gray-600 border-b-4 border-gray-800";
+        function recalculateViewport() {
+            const viewportWidth = viewport.clientWidth;
+            const viewportHeight = viewport.clientHeight;
+
+            // Escala baseada na altura para que os 1800px caibam exatamente na altura do viewport
+            cameraScale = viewportHeight / currentMap.altura;
+            
+            // Aplica clamp após re-escalar
+            clampCamera();
+            renderCamera();
+        }
+
+        function clampCamera() {
+            const viewportWidth = viewport.clientWidth;
+            const viewportHeight = viewport.clientHeight;
+
+            const scaledMapWidth = currentMap.largura * cameraScale;
+            const scaledMapHeight = currentMap.altura * cameraScale;
+
+            // Limites Horizontais (X)
+            let minX, maxX;
+            if (scaledMapWidth > viewportWidth) {
+                // Mapa é mais largo que a tela: podemos arrastar para a esquerda
+                minX = viewportWidth - scaledMapWidth;
+                maxX = 0;
             } else {
-                // Ativa B
-                btnLadoB.className = "flex-1 py-2 px-4 rounded-xl font-bold text-sm transition-all shadow-inner active:scale-95 bg-red-600 text-white hover:bg-red-500 border-b-4 border-red-800";
-                // Desativa A
-                btnLadoA.className = "flex-1 py-2 px-4 rounded-xl font-bold text-sm transition-all shadow-inner active:scale-95 bg-gray-700 text-gray-300 hover:bg-gray-600 border-b-4 border-gray-800";
+                // Mapa é menor ou igual à tela: travamos ele centralizado
+                minX = (viewportWidth - scaledMapWidth) / 2;
+                maxX = minX;
             }
+
+            // Limites Verticais (Y)
+            let minY, maxY;
+            if (scaledMapHeight > viewportHeight) {
+                // Mapa mais alto que a tela (raro neste setup pois travamos a altura)
+                minY = viewportHeight - scaledMapHeight;
+                maxY = 0;
+            } else {
+                // Como a escala é baseada na altura, normalmente cairá aqui, perfeitamente travado (min == max)
+                minY = (viewportHeight - scaledMapHeight) / 2;
+                maxY = minY;
+            }
+
+            // Aplica os limites rígidos
+            if (cameraX < minX) cameraX = minX;
+            if (cameraX > maxX) cameraX = maxX;
+            if (cameraY < minY) cameraY = minY;
+            if (cameraY > maxY) cameraY = maxY;
         }
 
-        // Centraliza a visão inicialmente no meio do mapa
-        function centerViewport() {
-            viewport.scrollLeft = (mapContainer.offsetWidth - viewport.clientWidth) / 2;
-            viewport.scrollTop = (mapContainer.offsetHeight - viewport.clientHeight) / 2;
+        function centerCamera() {
+            const viewportWidth = viewport.clientWidth;
+            const scaledMapWidth = currentMap.largura * cameraScale;
+            
+            // Começa no centro do eixo X
+            cameraX = (viewportWidth - scaledMapWidth) / 2;
+            clampCamera();
+            renderCamera();
         }
 
-        // Eventos dos botões
-        btnLadoA.addEventListener('click', () => { currentSide = 'A'; updateSide(); });
-        btnLadoB.addEventListener('click', () => { currentSide = 'B'; updateSide(); });
+        function renderCamera() {
+            // Aplicamos a translação EM PIXELS DE TELA e depois escalamos o container usando a origem no topo esquerdo (0,0)
+            camera.style.transform = `translate(${cameraX}px, ${cameraY}px) scale(${cameraScale})`;
+        }
 
-        let isDragging = false;
-        let startX, startY, initialScrollLeft, initialScrollTop;
-
-        const startDrag = (x, y) => {
+        viewport.addEventListener('pointerdown', (e) => {
             isDragging = true;
-            viewport.classList.add('grabbing');
-            startX = x;
-            startY = y;
-            initialScrollLeft = viewport.scrollLeft;
-            initialScrollTop = viewport.scrollTop;
-        };
+            viewport.classList.add('cursor-grabbing');
+            viewport.setPointerCapture(e.pointerId);
 
-        const doDrag = (x, y) => {
-            if (!isDragging) return;
-            // Previne o scroll nativo indesejado no mobile
-            const dx = x - startX;
-            const dy = y - startY;
-            viewport.scrollLeft = initialScrollLeft - dx;
-            viewport.scrollTop = initialScrollTop - dy;
-        };
-
-        const endDrag = () => {
-            isDragging = false;
-            viewport.classList.remove('grabbing');
-        };
-
-        // Eventos de Mouse (Desktop)
-        viewport.addEventListener('mousedown', (e) => startDrag(e.pageX, e.pageY));
-        viewport.addEventListener('mousemove', (e) => {
-            if (isDragging) e.preventDefault();
-            doDrag(e.pageX, e.pageY);
+            startPointerX = e.clientX;
+            startPointerY = e.clientY;
+            initialCameraX = cameraX;
+            initialCameraY = cameraY;
         });
-        viewport.addEventListener('mouseup', endDrag);
-        viewport.addEventListener('mouseleave', endDrag);
 
-        // Eventos de Touch (Mobile)
-        viewport.addEventListener('touchstart', (e) => startDrag(e.touches[0].pageX, e.touches[0].pageY), { passive: true });
-        viewport.addEventListener('touchmove', (e) => doDrag(e.touches[0].pageX, e.touches[0].pageY), { passive: true });
-        viewport.addEventListener('touchend', endDrag);
+        viewport.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
 
-        window.onload = () => {
-            initializeMap();
-            // Adiciona recálculo ao redimensionar a tela
-            window.addEventListener('resize', centerViewport);
+            // Calcula a distância movida
+            const deltaX = e.clientX - startPointerX;
+            const deltaY = e.clientY - startPointerY;
+
+            // Atualiza posição alvo
+            cameraX = initialCameraX + deltaX;
+            cameraY = initialCameraY + deltaY;
+
+            clampCamera();
+            renderCamera();
+        });
+
+        const endDrag = (e) => {
+            isDragging = false;
+            viewport.classList.remove('cursor-grabbing');
+            if (e && e.pointerId) viewport.releasePointerCapture(e.pointerId);
         };
+
+        viewport.addEventListener('pointerup', endDrag);
+        viewport.addEventListener('pointercancel', endDrag);
+
+        // Eventos de UI
+        sideSelector.addEventListener('change', updateSideImage);
+        window.addEventListener('resize', recalculateViewport);
+
+        // Iniciar
+        window.onload = initMap;
     </script>
 </body>
 </html>
