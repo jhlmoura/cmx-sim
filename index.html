@@ -2,128 +2,195 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <!-- Meta tag essencial para mobile: previne zoom e travamento de escala -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Gunbound Web Simulator</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;600;700&display=swap');
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
 
-        /* Removemos comportamentos padrão que atrapalham o "arrastar" em mobile/desktop */
         body {
-            font-family: 'Inter', sans-serif;
-            user-select: none; 
-            -webkit-user-select: none;
-            touch-action: none; /* Previne scroll nativo no mobile para usarmos os pointer events */
             background-color: #000;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden; /* Impede rolagem nativa */
+            touch-action: none; /* Previne gestos de recarregar a página no mobile */
         }
 
-        .font-retro {
-            font-family: 'VT323', monospace;
+        /* Container Principal do Jogo (Viewport) */
+        #game-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 120px; /* Espaço do HUD */
+            background-color: #1a1a1a;
+            overflow: hidden;
+            cursor: grab;
         }
 
-        /* Fallbacks visuais (sem textos, apenas uma malha/cor para debug caso imagens falhem) */
-        .fallback-fundo {
-            background-color: #0f172a;
-            background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
-            background-size: 40px 40px;
+        #game-container:active {
+            cursor: grabbing;
         }
 
-        .fallback-mapa {
-            background-color: transparent;
-            background-image: linear-gradient(rgba(34, 197, 94, 0.05) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(34, 197, 94, 0.05) 1px, transparent 1px);
-            background-size: 100px 100px;
+        /* O Mundo que será arrastado e escalonado */
+        #world {
+            position: absolute;
+            transform-origin: 0 0;
+            /* Um leve outline para debugar limites se a imagem falhar */
+            outline: 1px dashed rgba(255, 255, 255, 0.2); 
         }
 
-        /* Classes utilitárias do cursor da Câmera */
-        .cursor-grab { cursor: grab; }
-        .cursor-grabbing { cursor: grabbing !important; }
+        /* Camada de Fundo (Preenche todo o mapa) */
+        #fundo-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: 100% 100%; /* Força preencher todo o tamanho do mapa */
+            background-repeat: no-repeat;
+            background-position: center;
+            background-color: #2a3d45; /* Cor fallback */
+        }
 
-        /* Estilo do select (combobox) customizado pro estilo retrô/escuro */
+        /* Camada do Mapa Principal (Lado A ou B) */
+        #mapa-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-color: rgba(76, 175, 80, 0.1); /* Cor fallback translúcida */
+        }
+
+        /* Miniatura (Minimapa) */
+        #minimap-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 2px solid #555;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            z-index: 100;
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            /* Fallback de visualização se não tiver imagem */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #aaa;
+            cursor: ew-resize; /* Indica que pode arrastar para os lados */
+        }
+
+        /* HUD Inferior */
+        #hud {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 120px;
+            background: linear-gradient(to bottom, #3a3a3a, #1e1e1e);
+            border-top: 3px solid #555;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 200;
+        }
+
+        /* Controles do Mapa no Canto Inferior Esquerdo */
+        #map-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: rgba(0,0,0,0.4);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+
         select {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
+            padding: 8px 12px;
+            font-size: 16px;
+            background: #222;
+            color: #fff;
+            border: 1px solid #666;
+            border-radius: 4px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        /* Seletor de Lados */
+        #side-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            touch-action: pan-y; /* Permite swipe horizontal via JS */
+            cursor: ew-resize;
+        }
+
+        .side-btn {
+            background: #444;
+            color: #fff;
+            border: 1px solid #666;
+            padding: 8px 12px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .side-btn:hover, .side-btn:active {
+            background: #666;
+        }
+
+        #current-side-label {
+            font-size: 16px;
+            font-weight: bold;
+            width: 70px;
+            text-align: center;
         }
     </style>
 </head>
-<!-- Usamos h-[100dvh] que respeita a barra de navegação real dos celulares -->
-<body class="w-screen h-[100dvh] overflow-hidden flex flex-col">
+<body>
 
-    <main id="viewport-container" class="flex-1 relative overflow-hidden bg-gray-950 cursor-grab w-full">
-        
-        <!-- Câmera controlada via Transformação 2D (Translação e Escala) -->
-        <div id="camera" class="absolute top-0 left-0 origin-top-left will-change-transform">
-            
-            <!-- Container do Mapa (Tamanho Fixo: Ex: 1800x1800) -->
-            <div id="map-container" class="relative">
-                
-                <!-- Camada de Fundo -->
-                <div id="layer-fundo" class="absolute bg-no-repeat bg-center bg-cover fallback-fundo shadow-2xl"></div>
-
-                <!-- Camada do Terreno Principal (Lado A ou B) -->
-                <div id="layer-mapa" class="absolute inset-0 bg-no-repeat bg-center bg-contain fallback-mapa pointer-events-none"></div>
-                
-            </div>
-            
+    <div id="game-container">
+        <div id="world">
+            <div id="fundo-layer"></div>
+            <div id="mapa-layer"></div>
         </div>
         
-    </main>
+        <div id="minimap-container" title="Arraste para os lados para trocar A/B">
+            <span id="minimap-fallback-text">Minimapa</span>
+        </div>
+    </div>
 
-    <footer class="h-[120px] shrink-0 bg-gradient-to-b from-gray-800 to-gray-950 border-t-[3px] border-gray-600 shadow-[0_-5px_15px_rgba(0,0,0,0.8)] relative z-50 flex items-center px-4 md:px-8 justify-between">
-        
-        <!-- Esquerda: Seletor de Lado -->
-        <div class="flex flex-col gap-1 z-10 w-32">
-            <label for="side-selector" class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Lado do Mapa</label>
-            <div class="relative">
-                <select id="side-selector" class="w-full bg-gray-900 border border-gray-600 text-amber-500 font-bold py-2 pl-3 pr-8 rounded focus:outline-none focus:border-amber-500 shadow-inner cursor-pointer transition-colors hover:bg-gray-800">
-                    <option value="A">Lado A</option>
-                    <option value="B">Lado B</option>
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                </div>
+    <div id="hud">
+        <div id="map-controls">
+            <!-- Lista de Mapas -->
+            <select id="map-list" onchange="changeMap(this.value)"></select>
+
+            <!-- Seletor de Lados -->
+            <div id="side-selector">
+                <button class="side-btn" onclick="toggleSide()">&#9664;</button>
+                <span id="current-side-label">Lado A</span>
+                <button class="side-btn" onclick="toggleSide()">&#9654;</button>
             </div>
         </div>
-
-        <!-- Centro: Placeholder Barra de Força / Ângulo / Vento -->
-        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-            
-            <div class="bg-gray-900/80 border border-gray-700/80 rounded-xl p-3 flex flex-col gap-2 items-center w-[250px] md:w-[400px] shadow-lg backdrop-blur-sm">
-                
-                <!-- Info Superior do HUD central -->
-                <div class="w-full flex justify-between px-2 text-[10px] text-gray-500 font-bold uppercase">
-                    <span class="flex items-center gap-1"><div class="w-2 h-2 bg-blue-500 rounded-full"></div> Ang: 45°</span>
-                    <span class="flex items-center gap-1 text-green-400"><div class="w-2 h-2 bg-green-500 rounded-full"></div> Vento: 12</span>
-                </div>
-
-                <!-- Barra de Força Mockada -->
-                <div class="w-full h-4 bg-gray-950 rounded-full overflow-hidden border border-gray-800 relative">
-                    <div class="h-full bg-gradient-to-r from-red-600 via-orange-500 to-yellow-400 w-1/3"></div>
-                    <!-- Marcadores da barra -->
-                    <div class="absolute inset-0 flex justify-between px-[10%]">
-                        <div class="w-px h-full bg-gray-500/50"></div>
-                        <div class="w-px h-full bg-gray-500/50"></div>
-                        <div class="w-px h-full bg-gray-500/50"></div>
-                    </div>
-                </div>
-
-                <div class="text-[10px] text-gray-600 font-retro tracking-widest">PLACEHOLDER UI</div>
-            </div>
-
-        </div>
-        
-        <!-- Direita: Reservado para Itens (Slot vazio p/ manter alinhamento) -->
-        <div class="w-32"></div>
-        
-    </footer>
+    </div>
 
     <script>
-        // Dados do JSON de entrada
-        const mapData = {
+        // Mock do seu arquivo mapas/mapas.json com a estrutura atualizada
+        const jsonMock = {
             "mapas": [
                 {
                     "id": "adiumroot",
@@ -131,172 +198,231 @@
                     "ladoA": "mapas/Adiumroot A.webp",
                     "ladoB": "mapas/Adiumroot B.webp",
                     "fundo": "mapas/Adiumroot Fundo.webp",
-                    "miniatura": "mapas/Adiumroot Mini.webp",
+                    "miniaturaA": "mapas/Adiumroot Mini A.webp",
+                    "miniaturaB": "mapas/Adiumroot Mini B.webp",
                     "largura": 1800,
                     "altura": 1800,
                     "fundoLargura": 1300,
                     "fundoAltura": 1300,
                     "miniaturaLargura": 211,
                     "miniaturaAltura": 47
+                },
+                {
+                    "id": "metamine",
+                    "nome": "Metamine (Teste)",
+                    "ladoA": "mapas/Metamine A.webp",
+                    "ladoB": "mapas/Metamine B.webp",
+                    "fundo": "mapas/Metamine Fundo.webp",
+                    "miniaturaA": "mapas/Metamine Mini A.webp",
+                    "miniaturaB": "mapas/Metamine Mini B.webp",
+                    "largura": 2400,
+                    "altura": 1200,
+                    "fundoLargura": 1000,
+                    "fundoAltura": 800,
+                    "miniaturaLargura": 250,
+                    "miniaturaAltura": 40
                 }
             ]
         };
 
-        const currentMap = mapData.mapas[0];
+        const mapData = jsonMock.mapas;
+        let currentMapIndex = 0;
+        let currentSide = 'A'; // 'A' ou 'B'
+
+        let scale = 1;
+        let panX = 0;
+        let panY = 0;
 
         // Elementos DOM
-        const viewport = document.getElementById('viewport-container');
-        const camera = document.getElementById('camera');
-        const mapContainer = document.getElementById('map-container');
-        const layerFundo = document.getElementById('layer-fundo');
-        const layerMapa = document.getElementById('layer-mapa');
-        const sideSelector = document.getElementById('side-selector');
+        const gameContainer = document.getElementById('game-container');
+        const world = document.getElementById('world');
+        const fundoLayer = document.getElementById('fundo-layer');
+        const mapaLayer = document.getElementById('mapa-layer');
+        const minimap = document.getElementById('minimap-container');
+        const mapList = document.getElementById('map-list');
+        const sideLabel = document.getElementById('current-side-label');
 
-        // Estado da Câmera
-        let cameraScale = 1;
-        let cameraX = 0;
-        let cameraY = 0;
+        // Inicialização
+        function init() {
+            // Preencher select list
+            mapData.forEach((mapa, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = mapa.nome;
+                mapList.appendChild(option);
+            });
 
-        // Estado de Interação
-        let isDragging = false;
-        let startPointerX = 0;
-        let startPointerY = 0;
-        let initialCameraX = 0;
-        let initialCameraY = 0;
-
-        function initMap() {
-            // Configura o tamanho base (raw) do mapa
-            mapContainer.style.width = `${currentMap.largura}px`;
-            mapContainer.style.height = `${currentMap.altura}px`;
-
-            // Configura a camada de Fundo (Centralizando-a em relação ao mapa de 1800x1800)
-            layerFundo.style.width = `${currentMap.fundoLargura}px`;
-            layerFundo.style.height = `${currentMap.fundoAltura}px`;
-            layerFundo.style.left = `${(currentMap.largura - currentMap.fundoLargura) / 2}px`;
-            layerFundo.style.top = `${(currentMap.altura - currentMap.fundoAltura) / 2}px`;
-            layerFundo.style.backgroundImage = `url('${currentMap.fundo}')`;
-
-            // O mapa de terreno ocupa todo o container (1800x1800)
-            updateSideImage();
-
-            // Realiza o primeiro cálculo de escala e limites
-            recalculateViewport();
+            loadMap();
             
-            // Inicia com a câmera centralizada no mapa
-            centerCamera();
+            // Adicionar eventos de resize
+            window.addEventListener('resize', () => {
+                calculateScale();
+                updateTransform();
+            });
+
+            setupPanGestures();
+            setupSwipeToChangeSide();
         }
 
-        function updateSideImage() {
-            const side = sideSelector.value;
-            layerMapa.style.backgroundImage = `url('${side === 'A' ? currentMap.ladoA : currentMap.ladoB}')`;
+        // Troca de Mapa pela Lista
+        function changeMap(index) {
+            currentMapIndex = index;
+            loadMap();
         }
 
-        function recalculateViewport() {
-            const viewportWidth = viewport.clientWidth;
-            const viewportHeight = viewport.clientHeight;
+        // Troca de Lado (A/B)
+        function toggleSide() {
+            currentSide = currentSide === 'A' ? 'B' : 'A';
+            sideLabel.textContent = `Lado ${currentSide}`;
+            updateMapVisuals();
+        }
 
-            // Escala baseada na altura para que os 1800px caibam exatamente na altura do viewport
-            cameraScale = viewportHeight / currentMap.altura;
+        // Carrega as dimensões e imagens
+        function loadMap() {
+            const map = mapData[currentMapIndex];
             
-            // Aplica clamp após re-escalar
-            clampCamera();
-            renderCamera();
+            // Define dimensões reais do mundo
+            world.style.width = map.largura + 'px';
+            world.style.height = map.altura + 'px';
+
+            // Define dimensões do minimapa
+            minimap.style.width = map.miniaturaLargura + 'px';
+            minimap.style.height = map.miniaturaAltura + 'px';
+
+            // Fundo principal
+            fundoLayer.style.backgroundImage = `url('${map.fundo}')`;
+
+            calculateScale();
+            // Resetar posição ao carregar um novo mapa
+            panX = 0;
+            panY = 0; 
+
+            updateMapVisuals();
+            updateTransform();
         }
 
-        function clampCamera() {
-            const viewportWidth = viewport.clientWidth;
-            const viewportHeight = viewport.clientHeight;
+        // Atualiza apenas as imagens que dependem do lado (A ou B)
+        function updateMapVisuals() {
+            const map = mapData[currentMapIndex];
+            const imgSrc = currentSide === 'A' ? map.ladoA : map.ladoB;
+            const miniSrc = currentSide === 'A' ? map.miniaturaA : map.miniaturaB;
+            
+            mapaLayer.style.backgroundImage = `url('${imgSrc}')`;
+            minimap.style.backgroundImage = `url('${miniSrc}')`;
+            
+            // Lógica simples para sumir com o texto de fallback caso a imagem falhe
+            document.getElementById('minimap-fallback-text').style.display = 'none';
+        }
 
-            const scaledMapWidth = currentMap.largura * cameraScale;
-            const scaledMapHeight = currentMap.altura * cameraScale;
+        // Calcula a proporção Responsiva
+        function calculateScale() {
+            const map = mapData[currentMapIndex];
+            const containerHeight = gameContainer.clientHeight;
+            
+            // Escalonar baseado na altura para jogos estilo Gunbound
+            scale = containerHeight / map.altura;
+        }
 
-            // Limites Horizontais (X)
-            let minX, maxX;
-            if (scaledMapWidth > viewportWidth) {
-                // Mapa é mais largo que a tela: podemos arrastar para a esquerda
-                minX = viewportWidth - scaledMapWidth;
-                maxX = 0;
-            } else {
-                // Mapa é menor ou igual à tela: travamos ele centralizado
-                minX = (viewportWidth - scaledMapWidth) / 2;
-                maxX = minX;
+        // Aplica o Panning (Arraste) no Mundo com limites (Clamp)
+        function updateTransform() {
+            const map = mapData[currentMapIndex];
+            const cw = gameContainer.clientWidth;
+            const ch = gameContainer.clientHeight;
+
+            // Calcula limites baseados no tamanho do mapa após escala
+            const scaledWidth = map.largura * scale;
+            const scaledHeight = map.altura * scale;
+
+            let minX = cw - scaledWidth;
+            let maxX = 0;
+
+            let minY = ch - scaledHeight;
+            let maxY = 0;
+
+            // Se o mapa (escalonado) for menor que a tela, centraliza
+            if (minX > 0) {
+                minX = minX / 2;
+                maxX = minX; // trava no meio
             }
-
-            // Limites Verticais (Y)
-            let minY, maxY;
-            if (scaledMapHeight > viewportHeight) {
-                // Mapa mais alto que a tela (raro neste setup pois travamos a altura)
-                minY = viewportHeight - scaledMapHeight;
-                maxY = 0;
-            } else {
-                // Como a escala é baseada na altura, normalmente cairá aqui, perfeitamente travado (min == max)
-                minY = (viewportHeight - scaledMapHeight) / 2;
+            if (minY > 0) {
+                minY = minY / 2;
                 maxY = minY;
             }
 
-            // Aplica os limites rígidos
-            if (cameraX < minX) cameraX = minX;
-            if (cameraX > maxX) cameraX = maxX;
-            if (cameraY < minY) cameraY = minY;
-            if (cameraY > maxY) cameraY = maxY;
+            // Aplicar limites
+            panX = Math.max(minX, Math.min(maxX, panX));
+            panY = Math.max(minY, Math.min(maxY, panY));
+
+            world.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
         }
 
-        function centerCamera() {
-            const viewportWidth = viewport.clientWidth;
-            const scaledMapWidth = currentMap.largura * cameraScale;
-            
-            // Começa no centro do eixo X
-            cameraX = (viewportWidth - scaledMapWidth) / 2;
-            clampCamera();
-            renderCamera();
+        // --- SISTEMA DE GESTOS (Mover Mapa) ---
+        function setupPanGestures() {
+            let isDragging = false;
+            let startX, startY, startPanX, startPanY;
+
+            function onPointerDown(e) {
+                // Ignorar se clicar em algo do HUD
+                if (e.target.closest('#hud') || e.target.closest('#minimap-container')) return; 
+                
+                isDragging = true;
+                startX = e.clientX || (e.touches && e.touches[0].clientX);
+                startY = e.clientY || (e.touches && e.touches[0].clientY);
+                startPanX = panX;
+                startPanY = panY;
+            }
+
+            function onPointerMove(e) {
+                if (!isDragging) return;
+                const currentX = e.clientX || (e.touches && e.touches[0].clientX);
+                const currentY = e.clientY || (e.touches && e.touches[0].clientY);
+                
+                const dx = currentX - startX;
+                const dy = currentY - startY;
+
+                panX = startPanX + dx;
+                panY = startPanY + dy;
+                updateTransform();
+            }
+
+            function onPointerUp() {
+                isDragging = false;
+            }
+
+            gameContainer.addEventListener('mousedown', onPointerDown);
+            window.addEventListener('mousemove', onPointerMove);
+            window.addEventListener('mouseup', onPointerUp);
+
+            gameContainer.addEventListener('touchstart', onPointerDown, {passive: false});
+            window.addEventListener('touchmove', onPointerMove, {passive: false});
+            window.addEventListener('touchend', onPointerUp);
         }
 
-        function renderCamera() {
-            // Aplicamos a translação EM PIXELS DE TELA e depois escalamos o container usando a origem no topo esquerdo (0,0)
-            camera.style.transform = `translate(${cameraX}px, ${cameraY}px) scale(${cameraScale})`;
+        // --- SISTEMA DE GESTOS (Arrastar/Swipe para trocar o Lado) ---
+        function setupSwipeToChangeSide() {
+            let swipeStartX = 0;
+            const sideSelector = document.getElementById('side-selector');
+
+            // Aplica a lógica tanto ao painel de lado quanto ao minimapa
+            const targets = [sideSelector, minimap];
+
+            targets.forEach(target => {
+                target.addEventListener('mousedown', (e) => swipeStartX = e.clientX);
+                target.addEventListener('mouseup', (e) => handleSwipe(swipeStartX, e.clientX));
+                
+                target.addEventListener('touchstart', (e) => swipeStartX = e.touches[0].clientX, {passive: true});
+                target.addEventListener('touchend', (e) => handleSwipe(swipeStartX, e.changedTouches[0].clientX));
+            });
+
+            function handleSwipe(start, end) {
+                const diff = end - start;
+                if (Math.abs(diff) > 40) { // Tolerância de 40px para considerar arrasto
+                    toggleSide();
+                }
+            }
         }
 
-        viewport.addEventListener('pointerdown', (e) => {
-            isDragging = true;
-            viewport.classList.add('cursor-grabbing');
-            viewport.setPointerCapture(e.pointerId);
-
-            startPointerX = e.clientX;
-            startPointerY = e.clientY;
-            initialCameraX = cameraX;
-            initialCameraY = cameraY;
-        });
-
-        viewport.addEventListener('pointermove', (e) => {
-            if (!isDragging) return;
-
-            // Calcula a distância movida
-            const deltaX = e.clientX - startPointerX;
-            const deltaY = e.clientY - startPointerY;
-
-            // Atualiza posição alvo
-            cameraX = initialCameraX + deltaX;
-            cameraY = initialCameraY + deltaY;
-
-            clampCamera();
-            renderCamera();
-        });
-
-        const endDrag = (e) => {
-            isDragging = false;
-            viewport.classList.remove('cursor-grabbing');
-            if (e && e.pointerId) viewport.releasePointerCapture(e.pointerId);
-        };
-
-        viewport.addEventListener('pointerup', endDrag);
-        viewport.addEventListener('pointercancel', endDrag);
-
-        // Eventos de UI
-        sideSelector.addEventListener('change', updateSideImage);
-        window.addEventListener('resize', recalculateViewport);
-
-        // Iniciar
-        window.onload = initMap;
+        window.onload = init;
     </script>
 </body>
 </html>
