@@ -42,8 +42,8 @@
             transform-origin: 0 0;
         }
 
-        /* Camada de Fundo */
-        #fundo-layer {
+        /* Camadas do Mapa */
+        #fundo-layer, #mapa-layer {
             position: absolute;
             top: 0;
             left: 0;
@@ -52,33 +52,6 @@
             background-size: 100% 100%;
             background-repeat: no-repeat;
             background-position: center;
-        }
-
-        /* Camada do Mapa Principal (Lado A ou B) */
-        #mapa-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-size: 100% 100%;
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-
-        /* Miniatura (Minimapa) */
-        #minimap-container {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background-color: rgba(0, 0, 0, 0.7);
-            border: 2px solid #555;
-            border-radius: 4px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
-            z-index: 100;
-            background-size: 100% 100%;
-            background-repeat: no-repeat;
-            cursor: ew-resize;
         }
 
         /* HUD Inferior */
@@ -92,18 +65,17 @@
             border-top: 3px solid #555;
             display: flex;
             align-items: center;
-            justify-content: flex-start; /* Mantém os itens à esquerda */
             padding: 0 20px;
             z-index: 200;
         }
 
-        /* Bloco Único de Controles no Canto Inferior Esquerdo */
+        /* Controles (Canto Inferior Esquerdo) */
         #map-controls {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 20px;
             background: rgba(0,0,0,0.4);
-            padding: 10px 20px;
+            padding: 10px 15px;
             border-radius: 8px;
             border: 1px solid #444;
         }
@@ -120,39 +92,50 @@
             min-width: 150px;
         }
 
-        /* Seletor de Lados */
-        #side-selector {
+        /* Miniatura Interativa no HUD */
+        #minimap-container {
+            position: relative;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 2px solid #555;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 10px;
-            touch-action: pan-y;
-            cursor: ew-resize;
-            border-left: 1px solid #666;
-            padding-left: 15px;
+            justify-content: space-between; /* Espaça as setas para as bordas */
+            overflow: hidden;
+            transition: transform 0.1s;
         }
 
-        .side-btn {
-            background: #444;
+        #minimap-container:active {
+            transform: scale(0.98);
+        }
+
+        /* Setas Indicativas na Miniatura */
+        .minimap-arrow {
+            background: rgba(0, 0, 0, 0.6);
             color: #fff;
-            border: 1px solid #666;
-            padding: 8px 12px;
-            font-size: 16px;
-            border-radius: 4px;
-            cursor: pointer;
+            padding: 0 8px;
+            font-size: 18px;
             font-weight: bold;
-            transition: background 0.2s;
+            display: none; /* Controlado via JS */
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none; /* Deixa o clique passar para o minimapa */
+        }
+        
+        #arrow-left {
+            border-right: 1px solid #555;
         }
 
-        .side-btn:hover, .side-btn:active {
-            background: #666;
+        #arrow-right {
+            border-left: 1px solid #555;
+            margin-left: auto; /* Empurra para a direita */
         }
 
-        #current-side-label {
-            font-size: 16px;
-            font-weight: bold;
-            width: 70px;
-            text-align: center;
-        }
     </style>
 </head>
 <body>
@@ -162,21 +145,19 @@
             <div id="fundo-layer"></div>
             <div id="mapa-layer"></div>
         </div>
-        
-        <div id="minimap-container" title="Arraste para os lados para trocar A/B"></div>
     </div>
 
-    <!-- O HUD agora possui apenas 1 bloco inferior esquerdo com os dois controles -->
+    <!-- HUD apenas com Select e a Miniatura Interativa -->
     <div id="hud">
         <div id="map-controls">
             <select id="map-list" onchange="changeMap(this.value)">
                 <option value="" disabled selected>Carregando mapas...</option>
             </select>
 
-            <div id="side-selector">
-                <button class="side-btn" onclick="toggleSide()">&#9664;</button>
-                <span id="current-side-label">Lado A</span>
-                <button class="side-btn" onclick="toggleSide()">&#9654;</button>
+            <!-- A Miniatura agora é o botão de troca de lado -->
+            <div id="minimap-container" title="Clique para trocar de lado" onclick="toggleSide()">
+                <div id="arrow-left" class="minimap-arrow">&#9664;</div>
+                <div id="arrow-right" class="minimap-arrow">&#9654;</div>
             </div>
         </div>
     </div>
@@ -196,16 +177,16 @@
         const mapaLayer = document.getElementById('mapa-layer');
         const minimap = document.getElementById('minimap-container');
         const mapList = document.getElementById('map-list');
-        const sideLabel = document.getElementById('current-side-label');
+        const arrowLeft = document.getElementById('arrow-left');
+        const arrowRight = document.getElementById('arrow-right');
 
-        // Inicialização com Fetch
+        // Inicialização
         async function init() {
             try {
                 const response = await fetch('mapas/mapas.json');
                 const data = await response.json();
                 mapData = data.mapas;
 
-                // Limpa o select e preenche com os mapas reais
                 mapList.innerHTML = '';
                 mapData.forEach((mapa, index) => {
                     const option = document.createElement('option');
@@ -218,7 +199,6 @@
                     loadMap();
                 }
 
-                // Eventos
                 window.addEventListener('resize', () => {
                     if (mapData.length > 0) {
                         calculateScale();
@@ -227,12 +207,11 @@
                 });
 
                 setupPanGestures();
-                setupSwipeToChangeSide();
+                setupSwipeToChangeSide(); // Mantém a opção de swipe na miniatura além do clique
 
             } catch (error) {
                 console.error("Erro ao carregar mapas/mapas.json:", error);
                 mapList.innerHTML = '<option>Erro ao carregar mapas</option>';
-                alert("Não foi possível carregar os mapas. Você está rodando em um servidor local (ex: Live Server)?");
             }
         }
 
@@ -244,7 +223,6 @@
         function toggleSide() {
             if (mapData.length === 0) return;
             currentSide = currentSide === 'A' ? 'B' : 'A';
-            sideLabel.textContent = `Lado ${currentSide}`;
             updateMapVisuals();
         }
 
@@ -271,11 +249,19 @@
             const map = mapData[currentMapIndex];
             const imgSrc = currentSide === 'A' ? map.ladoA : map.ladoB;
             
-            // Assume que se miniaturaA não existir, busca 'miniatura', senão fica vazio
             let miniSrc = currentSide === 'A' ? (map.miniaturaA || map.miniatura) : (map.miniaturaB || map.miniatura);
             
             mapaLayer.style.backgroundImage = `url('${imgSrc}')`;
             minimap.style.backgroundImage = `url('${miniSrc}')`;
+
+            // Lógica das setas: Lado A exibe seta para direita, Lado B exibe seta para a esquerda
+            if (currentSide === 'A') {
+                arrowLeft.style.display = 'none';
+                arrowRight.style.display = 'flex';
+            } else {
+                arrowLeft.style.display = 'flex';
+                arrowRight.style.display = 'none';
+            }
         }
 
         function calculateScale() {
@@ -299,81 +285,3 @@
 
             if (minX > 0) {
                 minX = minX / 2;
-                maxX = minX; 
-            }
-            if (minY > 0) {
-                minY = minY / 2;
-                maxY = minY;
-            }
-
-            panX = Math.max(minX, Math.min(maxX, panX));
-            panY = Math.max(minY, Math.min(maxY, panY));
-
-            world.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
-        }
-
-        function setupPanGestures() {
-            let isDragging = false;
-            let startX, startY, startPanX, startPanY;
-
-            function onPointerDown(e) {
-                if (e.target.closest('#hud') || e.target.closest('#minimap-container')) return; 
-                isDragging = true;
-                startX = e.clientX || (e.touches && e.touches[0].clientX);
-                startY = e.clientY || (e.touches && e.touches[0].clientY);
-                startPanX = panX;
-                startPanY = panY;
-            }
-
-            function onPointerMove(e) {
-                if (!isDragging) return;
-                const currentX = e.clientX || (e.touches && e.touches[0].clientX);
-                const currentY = e.clientY || (e.touches && e.touches[0].clientY);
-                
-                const dx = currentX - startX;
-                const dy = currentY - startY;
-
-                panX = startPanX + dx;
-                panY = startPanY + dy;
-                updateTransform();
-            }
-
-            function onPointerUp() {
-                isDragging = false;
-            }
-
-            gameContainer.addEventListener('mousedown', onPointerDown);
-            window.addEventListener('mousemove', onPointerMove);
-            window.addEventListener('mouseup', onPointerUp);
-
-            gameContainer.addEventListener('touchstart', onPointerDown, {passive: false});
-            window.addEventListener('touchmove', onPointerMove, {passive: false});
-            window.addEventListener('touchend', onPointerUp);
-        }
-
-        function setupSwipeToChangeSide() {
-            let swipeStartX = 0;
-            const sideSelector = document.getElementById('side-selector');
-
-            const targets = [sideSelector, minimap];
-
-            targets.forEach(target => {
-                target.addEventListener('mousedown', (e) => swipeStartX = e.clientX);
-                target.addEventListener('mouseup', (e) => handleSwipe(swipeStartX, e.clientX));
-                
-                target.addEventListener('touchstart', (e) => swipeStartX = e.touches[0].clientX, {passive: true});
-                target.addEventListener('touchend', (e) => handleSwipe(swipeStartX, e.changedTouches[0].clientX));
-            });
-
-            function handleSwipe(start, end) {
-                const diff = end - start;
-                if (Math.abs(diff) > 40) { 
-                    toggleSide();
-                }
-            }
-        }
-
-        window.onload = init;
-    </script>
-</body>
-</html>
