@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gunbound Web Simulator</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Previne seleção de texto acidental ao arrastar o mapa */
+            user-select: none; 
+            -webkit-user-select: none;
+        }
+
+        .font-retro {
+            font-family: 'VT323', monospace;
+            letter-spacing: 1px;
+        }
+
+        /* Esconde a barra de rolagem para um visual mais limpo e imersivo (estilo jogo) */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; 
+        }
+
+        /* Fallback: Padrão visual para quando a imagem de Fundo não carregar */
+        .fallback-fundo {
+            background-color: #0f172a;
+            background-image: radial-gradient(#334155 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Fallback: Padrão visual para quando a imagem do Mapa não carregar */
+        .fallback-mapa {
+            background-color: rgba(34, 197, 94, 0.1); /* Verde translúcido */
+            border: 2px dashed rgba(34, 197, 94, 0.5);
+            /* Grid imitando blocos de terra */
+            background-image: linear-gradient(rgba(34, 197, 94, 0.2) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(34, 197, 94, 0.2) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        /* Classes para controle de cursor durante o arrasto */
+        .grab { cursor: grab; }
+        .grabbing { cursor: grabbing !important; }
+    </style>
+</head>
+<body class="bg-gray-950 text-white h-screen w-screen overflow-hidden flex flex-col relative">
+
+    <div class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-[90%] max-w-md bg-gray-900/80 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-2xl shadow-black/50 p-3 flex flex-col gap-3 transition-all">
+        
+        <!-- Cabeçalho do HUD -->
+        <div class="flex justify-between items-center px-2">
+            <div>
+                <h1 class="font-retro text-2xl text-amber-400 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">GB WEB SIM</h1>
+                <p id="map-name-display" class="text-xs text-gray-400 uppercase tracking-widest">Carregando...</p>
+            </div>
+            
+            <!-- Miniatura do Mapa -->
+            <div id="mini-map-container" class="h-[47px] w-[211px] bg-gray-800 rounded border border-gray-700 flex items-center justify-center overflow-hidden scale-75 origin-right">
+                <div id="mini-map-img" class="w-full h-full bg-cover bg-center text-[10px] text-gray-500 flex items-center justify-center">Miniatura</div>
+            </div>
+        </div>
+
+        <!-- Controles do Mapa -->
+        <div class="flex gap-2 w-full">
+            <button id="btn-lado-a" class="flex-1 py-2 px-4 rounded-xl font-bold text-sm transition-all shadow-inner active:scale-95 bg-blue-600 text-white hover:bg-blue-500 border-b-4 border-blue-800">
+                Lado A
+            </button>
+            <button id="btn-lado-b" class="flex-1 py-2 px-4 rounded-xl font-bold text-sm transition-all shadow-inner active:scale-95 bg-gray-700 text-gray-300 hover:bg-gray-600 border-b-4 border-gray-800">
+                Lado B
+            </button>
+        </div>
+        <div class="text-center text-[10px] text-gray-500">Arraste para navegar pelo mapa</div>
+    </div>
+
+    <main id="viewport" class="flex-1 w-full h-full overflow-auto grab relative">
+        
+        <!-- Container principal do mapa (Tamanho dinâmico via JS) -->
+        <div id="map-container" class="relative overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.8)] mx-auto my-auto origin-center">
+            
+            <!-- Camada de Fundo (Background) -->
+            <div id="layer-fundo" class="absolute inset-0 fallback-fundo bg-no-repeat bg-center m-auto flex items-center justify-center text-gray-700 text-2xl font-bold">
+                <span class="bg-gray-900/50 px-4 py-2 rounded">FUNDO: 1300x1300</span>
+            </div>
+
+            <!-- Camada do Mapa (Lado A / Lado B) -->
+            <div id="layer-mapa" class="absolute inset-0 fallback-mapa bg-no-repeat bg-center bg-contain m-auto flex items-center justify-center text-green-500/50 text-4xl font-bold pointer-events-none">
+                <span class="bg-gray-900/80 px-6 py-3 rounded border border-green-500/30">MAPA: 1800x1800</span>
+            </div>
+            
+        </div>
+    </main>
+
+    <script>
+        // Base de dados fornecida
+        const mapDatabase = {
+            "mapas": [
+                {
+                    "id": "adiumroot",
+                    "nome": "Adiumroot",
+                    "ladoA": "mapas/Adiumroot A.webp",
+                    "ladoB": "mapas/Adiumroot B.webp",
+                    "fundo": "mapas/Adiumroot Fundo.webp",
+                    "miniatura": "mapas/Adiumroot Mini.webp",
+                    "largura": 1800,
+                    "altura": 1800,
+                    "fundoLargura": 1300,
+                    "fundoAltura": 1300,
+                    "miniaturaLargura": 211,
+                    "miniaturaAltura": 47
+                }
+            ]
+        };
+
+        // Estado da aplicação
+        let currentMap = mapDatabase.mapas[0];
+        let currentSide = 'A';
+
+        // Elementos do DOM
+        const viewport = document.getElementById('viewport');
+        const mapContainer = document.getElementById('map-container');
+        const layerFundo = document.getElementById('layer-fundo');
+        const layerMapa = document.getElementById('layer-mapa');
+        const btnLadoA = document.getElementById('btn-lado-a');
+        const btnLadoB = document.getElementById('btn-lado-b');
+        const mapNameDisplay = document.getElementById('map-name-display');
+        const miniMapImg = document.getElementById('mini-map-img');
+
+        function initializeMap() {
+            // Configurar tamanhos do container do mapa (baseado no maior tamanho, que é o mapa em si)
+            mapContainer.style.width = `${currentMap.largura}px`;
+            mapContainer.style.height = `${currentMap.altura}px`;
+
+            // Configurar tamanho e imagem do fundo (centralizado no container maior)
+            layerFundo.style.width = `${currentMap.fundoLargura}px`;
+            layerFundo.style.height = `${currentMap.fundoAltura}px`;
+            layerFundo.style.backgroundImage = `url('${currentMap.fundo}')`;
+
+            // O mapa em si ocupará todo o container
+            layerMapa.style.width = `${currentMap.largura}px`;
+            layerMapa.style.height = `${currentMap.altura}px`;
+
+            // Configurar UI
+            mapNameDisplay.innerText = currentMap.nome;
+            miniMapImg.style.backgroundImage = `url('${currentMap.miniatura}')`;
+            miniMapImg.innerHTML = ""; // Limpa o texto de fallback se tiver imagem (o visual fica via fallback css)
+
+            updateSide();
+            
+            // Aguarda um pequeno delay para a renderização do DOM antes de centralizar a câmera
+            setTimeout(centerViewport, 100);
+        }
+
+        function updateSide() {
+            const imagePath = currentSide === 'A' ? currentMap.ladoA : currentMap.ladoB;
+            layerMapa.style.backgroundImage = `url('${imagePath}')`;
+
+            // Atualizar estilização dos botões
+            if (currentSide === 'A') {
+                // Ativa A
+                btnLadoA.className = "flex-1 py-2 px-4 rounded-xl font-bold text-sm transition-all shadow-inner active:scale-95 bg-blue-600 text-white hover:bg-blue-500 border-b-4 border-blue-800";
+                // Desativa B
+                btnLadoB.className = "flex-1 py-2 px-4 rounded-xl font-bold text-sm transition-all shadow-inner active:scale-95 bg-gray-700 text-gray-300 hover:bg-gray-600 border-b-4 border-gray-800";
+            } else {
+                // Ativa B
+                btnLadoB.className = "flex-1 py-2 px-4 rounded-xl font-bold text-sm transition-all shadow-inner active:scale-95 bg-red-600 text-white hover:bg-red-500 border-b-4 border-red-800";
+                // Desativa A
+                btnLadoA.className = "flex-1 py-2 px-4 rounded-xl font-bold text-sm transition-all shadow-inner active:scale-95 bg-gray-700 text-gray-300 hover:bg-gray-600 border-b-4 border-gray-800";
+            }
+        }
+
+        // Centraliza a visão inicialmente no meio do mapa
+        function centerViewport() {
+            viewport.scrollLeft = (mapContainer.offsetWidth - viewport.clientWidth) / 2;
+            viewport.scrollTop = (mapContainer.offsetHeight - viewport.clientHeight) / 2;
+        }
+
+        // Eventos dos botões
+        btnLadoA.addEventListener('click', () => { currentSide = 'A'; updateSide(); });
+        btnLadoB.addEventListener('click', () => { currentSide = 'B'; updateSide(); });
+
+        let isDragging = false;
+        let startX, startY, initialScrollLeft, initialScrollTop;
+
+        const startDrag = (x, y) => {
+            isDragging = true;
+            viewport.classList.add('grabbing');
+            startX = x;
+            startY = y;
+            initialScrollLeft = viewport.scrollLeft;
+            initialScrollTop = viewport.scrollTop;
+        };
+
+        const doDrag = (x, y) => {
+            if (!isDragging) return;
+            // Previne o scroll nativo indesejado no mobile
+            const dx = x - startX;
+            const dy = y - startY;
+            viewport.scrollLeft = initialScrollLeft - dx;
+            viewport.scrollTop = initialScrollTop - dy;
+        };
+
+        const endDrag = () => {
+            isDragging = false;
+            viewport.classList.remove('grabbing');
+        };
+
+        // Eventos de Mouse (Desktop)
+        viewport.addEventListener('mousedown', (e) => startDrag(e.pageX, e.pageY));
+        viewport.addEventListener('mousemove', (e) => {
+            if (isDragging) e.preventDefault();
+            doDrag(e.pageX, e.pageY);
+        });
+        viewport.addEventListener('mouseup', endDrag);
+        viewport.addEventListener('mouseleave', endDrag);
+
+        // Eventos de Touch (Mobile)
+        viewport.addEventListener('touchstart', (e) => startDrag(e.touches[0].pageX, e.touches[0].pageY), { passive: true });
+        viewport.addEventListener('touchmove', (e) => doDrag(e.touches[0].pageX, e.touches[0].pageY), { passive: true });
+        viewport.addEventListener('touchend', endDrag);
+
+        window.onload = () => {
+            initializeMap();
+            // Adiciona recálculo ao redimensionar a tela
+            window.addEventListener('resize', centerViewport);
+        };
+    </script>
+</body>
+</html>
