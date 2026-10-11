@@ -1,0 +1,15 @@
+
+{
+  "mapas": [
+    {
+      "id": "adiumroot",
+      "nome": "Adiumroot",
+      "ladoA": "assets/mapas/metamine/lado-a.png",
+      "ladoB": "assets/mapas/metamine/lado-b.png",
+      "fundo": "assets/mapas/metamine/fundo.png",
+      "miniatura": "assets/mapas/metamine/miniatura.png",
+      "largura": 1800,
+      "altura": 1800
+    },
+    ]
+}
