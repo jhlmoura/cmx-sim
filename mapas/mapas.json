@@ -4,12 +4,16 @@
     {
       "id": "adiumroot",
       "nome": "Adiumroot",
-      "ladoA": "assets/mapas/metamine/lado-a.png",
-      "ladoB": "assets/mapas/metamine/lado-b.png",
-      "fundo": "assets/mapas/metamine/fundo.png",
-      "miniatura": "assets/mapas/metamine/miniatura.png",
+      "ladoA": "mapas/Adiumroot A.webp",
+      "ladoB": "mapas/Adiumroot B.webp",
+      "fundo": "mapas/Adiumroot Fundo.webp",
+      "miniatura": "mapas/Adiumroot Mini.webp",
       "largura": 1800,
-      "altura": 1800
-    },
-    ]
+      "altura": 1800,
+      "fundoLargura": 1300,
+      "fundoAltura": 1300,
+      "miniaturaLargura": 211,
+      "miniaturaAltura": 47
+    }
+  ]
 }
