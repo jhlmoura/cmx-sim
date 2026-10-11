@@ -16,8 +16,8 @@
             background-color: #000;
             color: #fff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden; /* Impede rolagem nativa */
-            touch-action: none; /* Previne gestos de recarregar a página no mobile */
+            overflow: hidden;
+            touch-action: none;
         }
 
         /* Container Principal do Jogo (Viewport) */
@@ -26,7 +26,7 @@
             top: 0;
             left: 0;
             right: 0;
-            bottom: 120px; /* Espaço do HUD */
+            bottom: 120px;
             background-color: #1a1a1a;
             overflow: hidden;
             cursor: grab;
@@ -40,21 +40,18 @@
         #world {
             position: absolute;
             transform-origin: 0 0;
-            /* Um leve outline para debugar limites se a imagem falhar */
-            outline: 1px dashed rgba(255, 255, 255, 0.2); 
         }
 
-        /* Camada de Fundo (Preenche todo o mapa) */
+        /* Camada de Fundo */
         #fundo-layer {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-size: 100% 100%; /* Força preencher todo o tamanho do mapa */
+            background-size: 100% 100%;
             background-repeat: no-repeat;
             background-position: center;
-            background-color: #2a3d45; /* Cor fallback */
         }
 
         /* Camada do Mapa Principal (Lado A ou B) */
@@ -67,7 +64,6 @@
             background-size: 100% 100%;
             background-repeat: no-repeat;
             background-position: center;
-            background-color: rgba(76, 175, 80, 0.1); /* Cor fallback translúcida */
         }
 
         /* Miniatura (Minimapa) */
@@ -82,13 +78,7 @@
             z-index: 100;
             background-size: 100% 100%;
             background-repeat: no-repeat;
-            /* Fallback de visualização se não tiver imagem */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            color: #aaa;
-            cursor: ew-resize; /* Indica que pode arrastar para os lados */
+            cursor: ew-resize;
         }
 
         /* HUD Inferior */
@@ -102,17 +92,18 @@
             border-top: 3px solid #555;
             display: flex;
             align-items: center;
+            justify-content: flex-start; /* Mantém os itens à esquerda */
             padding: 0 20px;
             z-index: 200;
         }
 
-        /* Controles do Mapa no Canto Inferior Esquerdo */
+        /* Bloco Único de Controles no Canto Inferior Esquerdo */
         #map-controls {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
             background: rgba(0,0,0,0.4);
-            padding: 10px 15px;
+            padding: 10px 20px;
             border-radius: 8px;
             border: 1px solid #444;
         }
@@ -126,6 +117,7 @@
             border-radius: 4px;
             cursor: pointer;
             outline: none;
+            min-width: 150px;
         }
 
         /* Seletor de Lados */
@@ -133,8 +125,10 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            touch-action: pan-y; /* Permite swipe horizontal via JS */
+            touch-action: pan-y;
             cursor: ew-resize;
+            border-left: 1px solid #666;
+            padding-left: 15px;
         }
 
         .side-btn {
@@ -169,17 +163,16 @@
             <div id="mapa-layer"></div>
         </div>
         
-        <div id="minimap-container" title="Arraste para os lados para trocar A/B">
-            <span id="minimap-fallback-text">Minimapa</span>
-        </div>
+        <div id="minimap-container" title="Arraste para os lados para trocar A/B"></div>
     </div>
 
+    <!-- O HUD agora possui apenas 1 bloco inferior esquerdo com os dois controles -->
     <div id="hud">
         <div id="map-controls">
-            <!-- Lista de Mapas -->
-            <select id="map-list" onchange="changeMap(this.value)"></select>
+            <select id="map-list" onchange="changeMap(this.value)">
+                <option value="" disabled selected>Carregando mapas...</option>
+            </select>
 
-            <!-- Seletor de Lados -->
             <div id="side-selector">
                 <button class="side-btn" onclick="toggleSide()">&#9664;</button>
                 <span id="current-side-label">Lado A</span>
@@ -189,46 +182,9 @@
     </div>
 
     <script>
-        // Mock do seu arquivo mapas/mapas.json com a estrutura atualizada
-        const jsonMock = {
-            "mapas": [
-                {
-                    "id": "adiumroot",
-                    "nome": "Adiumroot",
-                    "ladoA": "mapas/Adiumroot A.webp",
-                    "ladoB": "mapas/Adiumroot B.webp",
-                    "fundo": "mapas/Adiumroot Fundo.webp",
-                    "miniaturaA": "mapas/Adiumroot Mini A.webp",
-                    "miniaturaB": "mapas/Adiumroot Mini B.webp",
-                    "largura": 1800,
-                    "altura": 1800,
-                    "fundoLargura": 1300,
-                    "fundoAltura": 1300,
-                    "miniaturaLargura": 211,
-                    "miniaturaAltura": 47
-                },
-                {
-                    "id": "metamine",
-                    "nome": "Metamine (Teste)",
-                    "ladoA": "mapas/Metamine A.webp",
-                    "ladoB": "mapas/Metamine B.webp",
-                    "fundo": "mapas/Metamine Fundo.webp",
-                    "miniaturaA": "mapas/Metamine Mini A.webp",
-                    "miniaturaB": "mapas/Metamine Mini B.webp",
-                    "largura": 2400,
-                    "altura": 1200,
-                    "fundoLargura": 1000,
-                    "fundoAltura": 800,
-                    "miniaturaLargura": 250,
-                    "miniaturaAltura": 40
-                }
-            ]
-        };
-
-        const mapData = jsonMock.mapas;
+        let mapData = [];
         let currentMapIndex = 0;
         let currentSide = 'A'; // 'A' ou 'B'
-
         let scale = 1;
         let panX = 0;
         let panY = 0;
@@ -242,58 +198,68 @@
         const mapList = document.getElementById('map-list');
         const sideLabel = document.getElementById('current-side-label');
 
-        // Inicialização
-        function init() {
-            // Preencher select list
-            mapData.forEach((mapa, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.textContent = mapa.nome;
-                mapList.appendChild(option);
-            });
+        // Inicialização com Fetch
+        async function init() {
+            try {
+                const response = await fetch('mapas/mapas.json');
+                const data = await response.json();
+                mapData = data.mapas;
 
-            loadMap();
-            
-            // Adicionar eventos de resize
-            window.addEventListener('resize', () => {
-                calculateScale();
-                updateTransform();
-            });
+                // Limpa o select e preenche com os mapas reais
+                mapList.innerHTML = '';
+                mapData.forEach((mapa, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = mapa.nome;
+                    mapList.appendChild(option);
+                });
 
-            setupPanGestures();
-            setupSwipeToChangeSide();
+                if (mapData.length > 0) {
+                    loadMap();
+                }
+
+                // Eventos
+                window.addEventListener('resize', () => {
+                    if (mapData.length > 0) {
+                        calculateScale();
+                        updateTransform();
+                    }
+                });
+
+                setupPanGestures();
+                setupSwipeToChangeSide();
+
+            } catch (error) {
+                console.error("Erro ao carregar mapas/mapas.json:", error);
+                mapList.innerHTML = '<option>Erro ao carregar mapas</option>';
+                alert("Não foi possível carregar os mapas. Você está rodando em um servidor local (ex: Live Server)?");
+            }
         }
 
-        // Troca de Mapa pela Lista
         function changeMap(index) {
-            currentMapIndex = index;
+            currentMapIndex = parseInt(index);
             loadMap();
         }
 
-        // Troca de Lado (A/B)
         function toggleSide() {
+            if (mapData.length === 0) return;
             currentSide = currentSide === 'A' ? 'B' : 'A';
             sideLabel.textContent = `Lado ${currentSide}`;
             updateMapVisuals();
         }
 
-        // Carrega as dimensões e imagens
         function loadMap() {
             const map = mapData[currentMapIndex];
             
-            // Define dimensões reais do mundo
             world.style.width = map.largura + 'px';
             world.style.height = map.altura + 'px';
 
-            // Define dimensões do minimapa
             minimap.style.width = map.miniaturaLargura + 'px';
             minimap.style.height = map.miniaturaAltura + 'px';
 
-            // Fundo principal
             fundoLayer.style.backgroundImage = `url('${map.fundo}')`;
 
             calculateScale();
-            // Resetar posição ao carregar um novo mapa
             panX = 0;
             panY = 0; 
 
@@ -301,70 +267,57 @@
             updateTransform();
         }
 
-        // Atualiza apenas as imagens que dependem do lado (A ou B)
         function updateMapVisuals() {
             const map = mapData[currentMapIndex];
             const imgSrc = currentSide === 'A' ? map.ladoA : map.ladoB;
-            const miniSrc = currentSide === 'A' ? map.miniaturaA : map.miniaturaB;
+            
+            // Assume que se miniaturaA não existir, busca 'miniatura', senão fica vazio
+            let miniSrc = currentSide === 'A' ? (map.miniaturaA || map.miniatura) : (map.miniaturaB || map.miniatura);
             
             mapaLayer.style.backgroundImage = `url('${imgSrc}')`;
             minimap.style.backgroundImage = `url('${miniSrc}')`;
-            
-            // Lógica simples para sumir com o texto de fallback caso a imagem falhe
-            document.getElementById('minimap-fallback-text').style.display = 'none';
         }
 
-        // Calcula a proporção Responsiva
         function calculateScale() {
             const map = mapData[currentMapIndex];
             const containerHeight = gameContainer.clientHeight;
-            
-            // Escalonar baseado na altura para jogos estilo Gunbound
             scale = containerHeight / map.altura;
         }
 
-        // Aplica o Panning (Arraste) no Mundo com limites (Clamp)
         function updateTransform() {
             const map = mapData[currentMapIndex];
             const cw = gameContainer.clientWidth;
             const ch = gameContainer.clientHeight;
 
-            // Calcula limites baseados no tamanho do mapa após escala
             const scaledWidth = map.largura * scale;
             const scaledHeight = map.altura * scale;
 
             let minX = cw - scaledWidth;
             let maxX = 0;
-
             let minY = ch - scaledHeight;
             let maxY = 0;
 
-            // Se o mapa (escalonado) for menor que a tela, centraliza
             if (minX > 0) {
                 minX = minX / 2;
-                maxX = minX; // trava no meio
+                maxX = minX; 
             }
             if (minY > 0) {
                 minY = minY / 2;
                 maxY = minY;
             }
 
-            // Aplicar limites
             panX = Math.max(minX, Math.min(maxX, panX));
             panY = Math.max(minY, Math.min(maxY, panY));
 
             world.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
         }
 
-        // --- SISTEMA DE GESTOS (Mover Mapa) ---
         function setupPanGestures() {
             let isDragging = false;
             let startX, startY, startPanX, startPanY;
 
             function onPointerDown(e) {
-                // Ignorar se clicar em algo do HUD
                 if (e.target.closest('#hud') || e.target.closest('#minimap-container')) return; 
-                
                 isDragging = true;
                 startX = e.clientX || (e.touches && e.touches[0].clientX);
                 startY = e.clientY || (e.touches && e.touches[0].clientY);
@@ -398,12 +351,10 @@
             window.addEventListener('touchend', onPointerUp);
         }
 
-        // --- SISTEMA DE GESTOS (Arrastar/Swipe para trocar o Lado) ---
         function setupSwipeToChangeSide() {
             let swipeStartX = 0;
             const sideSelector = document.getElementById('side-selector');
 
-            // Aplica a lógica tanto ao painel de lado quanto ao minimapa
             const targets = [sideSelector, minimap];
 
             targets.forEach(target => {
@@ -416,7 +367,7 @@
 
             function handleSwipe(start, end) {
                 const diff = end - start;
-                if (Math.abs(diff) > 40) { // Tolerância de 40px para considerar arrasto
+                if (Math.abs(diff) > 40) { 
                     toggleSide();
                 }
             }
