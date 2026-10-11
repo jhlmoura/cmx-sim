@@ -13,7 +13,7 @@
         }
 
         body {
-            background-color: #0b111e; /* Cor de fundo escura baseada no print */
+            background-color: #0b111e;
             color: #fff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: hidden;
@@ -26,7 +26,7 @@
             top: 0;
             left: 0;
             right: 0;
-            bottom: 80px; /* Espaço do HUD */
+            bottom: 80px; 
             background-color: #0b111e;
             overflow: hidden;
             cursor: grab;
@@ -61,69 +61,57 @@
             left: 0;
             right: 0;
             height: 80px;
-            background: linear-gradient(to bottom, #2b3240, #161b24);
-            border-top: 2px solid #000;
+            background: #11151e;
+            border-top: 1px solid #000;
             display: flex;
             align-items: center;
             padding: 0 20px;
             z-index: 200;
-            box-shadow: inset 0 2px 5px rgba(255,255,255,0.1);
+            box-shadow: inset 0 2px 5px rgba(255,255,255,0.05);
         }
 
-        /* Controles (Canto Inferior Esquerdo) */
+        /* Caixa Escura que envelopa o minimapa */
         #map-controls {
             display: flex;
             align-items: center;
-            gap: 10px;
-            background: #11151e;
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid #0a0d14;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            background: #0d1117;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #06080b;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+            position: relative; /* Para ancorar o menu suspenso */
         }
 
-        /* Select de Mapas */
-        select {
-            padding: 6px 10px;
-            font-size: 13px;
-            background: #1c222e;
-            color: #d1d5db;
-            border: 1px solid #3a4354;
-            border-radius: 4px;
-            cursor: pointer;
-            outline: none;
-            min-width: 130px;
-            font-weight: bold;
-        }
-
-        select:focus {
-            border-color: #5865f2;
-        }
-
-        /* Miniatura Interativa no HUD */
+        /* Miniatura Interativa Principal (O controle em si) */
         #minimap-container {
             position: relative;
             background-color: #000;
-            border: 1px solid #3a4354;
+            border: 2px solid #3a4354;
             border-radius: 4px;
             background-size: 100% 100%;
             background-repeat: no-repeat;
+            min-width: 200px;
+            min-height: 47px; /* Altura padrão com base no seu json inicial */
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Zonas de clique Invisíveis */
+        .click-zone-side {
+            width: 30px;
+            height: 100%;
             cursor: pointer;
-            /* As dimensões serão definidas via JS, mas colocamos um min para não sumir */
-            min-width: 100px;
-            min-height: 30px; 
-            transition: filter 0.2s;
+            z-index: 10;
         }
 
-        #minimap-container:hover {
-            filter: brightness(1.2);
+        .click-zone-center {
+            flex-grow: 1;
+            height: 100%;
+            cursor: pointer;
+            z-index: 10;
         }
 
-        #minimap-container:active {
-            transform: scale(0.98);
-        }
-
-        /* Seta Laranja (Triângulo CSS) */
+        /* Seta Laranja (Triângulo CSS) - Mantido igual ao anterior */
         #arrow-indicator {
             position: absolute;
             top: 50%;
@@ -131,23 +119,85 @@
             width: 0; 
             height: 0; 
             border-style: solid;
-            pointer-events: none; /* Deixa o clique passar para a miniatura */
-            filter: drop-shadow(0px 0px 2px rgba(0,0,0,0.8)); /* Sombra para destacar na imagem */
+            pointer-events: none; 
+            filter: drop-shadow(0px 0px 2px rgba(0,0,0,0.8)); 
+            z-index: 5;
         }
 
-        /* Setas para Direita e Esquerda */
         .arrow-right {
-            right: 8px;
+            right: 6px;
             border-width: 6px 0 6px 8px;
-            border-color: transparent transparent transparent #ffaa00; /* Laranja Gunbound */
+            border-color: transparent transparent transparent #ffaa00; 
         }
 
         .arrow-left {
-            left: 8px;
+            left: 6px;
             border-width: 6px 8px 6px 0;
             border-color: transparent #ffaa00 transparent transparent;
         }
 
+        /* ------------------------------------- */
+        /* Menu Suspenso Visual (Grade de Mapas) */
+        /* ------------------------------------- */
+        #visual-map-list {
+            position: absolute;
+            bottom: 100%; /* Sobe a partir da caixa */
+            left: 0;
+            margin-bottom: 10px;
+            background: rgba(17, 21, 30, 0.95);
+            border: 1px solid #3a4354;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.8);
+            display: none; /* Escondido por padrão */
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            width: max-content;
+            max-width: 80vw;
+            max-height: 60vh;
+            overflow-y: auto;
+            z-index: 300;
+            backdrop-filter: blur(5px);
+        }
+
+        /* Como o scrollbar no Windows pode ficar feio */
+        #visual-map-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        #visual-map-list::-webkit-scrollbar-thumb {
+            background: #3a4354;
+            border-radius: 4px;
+        }
+
+        .map-item-card {
+            background: #000;
+            border: 2px solid #2b3240;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .map-item-card:hover {
+            border-color: #ffaa00;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 170, 0, 0.2);
+        }
+
+        .map-item-preview {
+            width: 100%;
+            height: 40px; /* Altura fixa para preview na lista */
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            border-bottom: 1px solid #2b3240;
+        }
+
+        .map-item-name {
+            padding: 5px;
+            font-size: 12px;
+            color: #ccc;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -161,12 +211,17 @@
 
     <div id="hud">
         <div id="map-controls">
-            <select id="map-list" onchange="changeMap(this.value)">
-                <option value="" disabled selected>Carregando mapas...</option>
-            </select>
+            <!-- Menu Visual que sobe ao clicar no meio da miniatura -->
+            <div id="visual-map-list"></div>
 
-            <!-- Miniatura ao lado do Select, contendo a setinha -->
-            <div id="minimap-container" title="Clique para trocar o lado" onclick="toggleSide()">
+            <!-- Miniatura Central, agora sem o Select em texto -->
+            <div id="minimap-container">
+                <!-- Zonas de clique para lado ou lista -->
+                <div class="click-zone-side" id="click-left" onclick="toggleSide('left')" title="Lado B"></div>
+                <div class="click-zone-center" onclick="toggleMapList()" title="Trocar Mapa"></div>
+                <div class="click-zone-side" id="click-right" onclick="toggleSide('right')" title="Lado A"></div>
+                
+                <!-- Seta Laranja CSS -->
                 <div id="arrow-indicator" class="arrow-right"></div>
             </div>
         </div>
@@ -186,13 +241,12 @@
         const fundoLayer = document.getElementById('fundo-layer');
         const mapaLayer = document.getElementById('mapa-layer');
         const minimap = document.getElementById('minimap-container');
-        const mapList = document.getElementById('map-list');
+        const visualMapList = document.getElementById('visual-map-list');
         const arrowIndicator = document.getElementById('arrow-indicator');
 
         // Inicialização
         async function init() {
             try {
-                // Tenta carregar o JSON (o "?v=" evita cache desatualizado no GitHub)
                 const response = await fetch('mapas/mapas.json?v=' + new Date().getTime());
                 
                 if (!response.ok) {
@@ -202,13 +256,7 @@
                 const data = await response.json();
                 mapData = data.mapas;
 
-                mapList.innerHTML = '';
-                mapData.forEach((mapa, index) => {
-                    const option = document.createElement('option');
-                    option.value = index;
-                    option.textContent = mapa.nome;
-                    mapList.appendChild(option);
-                });
+                buildVisualMapList();
 
                 if (mapData.length > 0) {
                     loadMap();
@@ -223,40 +271,89 @@
 
                 setupPanGestures();
 
+                // Fechar lista se clicar fora
+                document.addEventListener('mousedown', (e) => {
+                    if (!e.target.closest('#map-controls') && visualMapList.style.display === 'grid') {
+                        visualMapList.style.display = 'none';
+                    }
+                });
+
             } catch (error) {
                 console.error("Erro ao carregar mapas:", error);
-                mapList.innerHTML = `<option>Erro de Leitura</option>`;
-                alert("Falha ao ler mapas/mapas.json. Verifique se a pasta e o arquivo estão com letras minúsculas no GitHub.");
+                alert("Falha ao ler mapas/mapas.json.");
             }
         }
 
-        function changeMap(index) {
-            currentMapIndex = parseInt(index);
-            currentSide = 'A'; // Reseta pro lado A ao trocar de mapa
+        // Constrói a lista visual (Grade)
+        function buildVisualMapList() {
+            visualMapList.innerHTML = '';
+            mapData.forEach((mapa, index) => {
+                const card = document.createElement('div');
+                card.className = 'map-item-card';
+                card.onclick = () => selectMap(index);
+
+                const preview = document.createElement('div');
+                preview.className = 'map-item-preview';
+                
+                // Usa a miniatura padrão (ou miniaturaA) para o preview da lista
+                let previewSrc = mapa.miniaturaA || mapa.miniatura;
+                preview.style.backgroundImage = `url('${previewSrc}')`;
+
+                const nameLabel = document.createElement('div');
+                nameLabel.className = 'map-item-name';
+                nameLabel.textContent = mapa.nome;
+
+                card.appendChild(preview);
+                card.appendChild(nameLabel);
+                visualMapList.appendChild(card);
+            });
+        }
+
+        // Abre/Fecha a lista de mapas
+        function toggleMapList() {
+            if (visualMapList.style.display === 'grid') {
+                visualMapList.style.display = 'none';
+            } else {
+                visualMapList.style.display = 'grid';
+            }
+        }
+
+        // Seleciona um mapa a partir da lista
+        function selectMap(index) {
+            currentMapIndex = index;
+            currentSide = 'A'; // Força resetar para o lado A ao trocar
+            visualMapList.style.display = 'none';
             loadMap();
         }
 
-        function toggleSide() {
+        // Lógica de clique nas pontas
+        function toggleSide(clickedSide) {
             if (mapData.length === 0) return;
-            currentSide = currentSide === 'A' ? 'B' : 'A';
-            updateMapVisuals();
+            
+            // Se estou no lado A e a seta está na direita, clico na direita para ir pro lado B.
+            // Se estou no lado B e a seta está na esquerda, clico na esquerda para voltar pro lado A.
+            
+            if (currentSide === 'A' && clickedSide === 'right') {
+                currentSide = 'B';
+                updateMapVisuals();
+            } else if (currentSide === 'B' && clickedSide === 'left') {
+                currentSide = 'A';
+                updateMapVisuals();
+            }
         }
 
         function loadMap() {
             const map = mapData[currentMapIndex];
             
-            // Dimensões do mapa principal
             world.style.width = map.largura + 'px';
             world.style.height = map.altura + 'px';
 
-            // Aplica as dimensões da miniatura baseadas no JSON
             minimap.style.width = map.miniaturaLargura + 'px';
             minimap.style.height = map.miniaturaAltura + 'px';
 
             fundoLayer.style.backgroundImage = `url('${map.fundo}')`;
 
             calculateScale();
-            // Centraliza o mapa inicialmente
             panX = 0;
             panY = 0; 
 
@@ -268,24 +365,29 @@
             const map = mapData[currentMapIndex];
             const imgSrc = currentSide === 'A' ? map.ladoA : map.ladoB;
             
-            // Aceita miniaturaA/B se existir, ou usa a miniatura padrão como fallback
             let miniSrc = currentSide === 'A' ? (map.miniaturaA || map.miniatura) : (map.miniaturaB || map.miniatura);
             
             mapaLayer.style.backgroundImage = `url('${imgSrc}')`;
             minimap.style.backgroundImage = `url('${miniSrc}')`;
 
-            // Alterna o estilo da seta laranja
+            // Lógica visual da seta e display das zonas de clique
+            const clickLeft = document.getElementById('click-left');
+            const clickRight = document.getElementById('click-right');
+
             if (currentSide === 'A') {
-                arrowIndicator.className = 'arrow-right'; // Aponta para a direita
+                arrowIndicator.className = 'arrow-right';
+                clickLeft.style.display = 'none';  // Desativa zona de clique esquerda
+                clickRight.style.display = 'block'; // Ativa zona de clique direita
             } else {
-                arrowIndicator.className = 'arrow-left'; // Aponta para a esquerda
+                arrowIndicator.className = 'arrow-left';
+                clickLeft.style.display = 'block'; // Ativa zona esquerda
+                clickRight.style.display = 'none'; // Desativa zona direita
             }
         }
 
         function calculateScale() {
             const map = mapData[currentMapIndex];
             const containerHeight = gameContainer.clientHeight;
-            // O mapa escala para caber exatamente na altura da tela
             scale = containerHeight / map.altura;
         }
 
@@ -302,7 +404,6 @@
             let minY = ch - scaledHeight;
             let maxY = 0;
 
-            // Se o mapa for menor que a tela, centraliza
             if (minX > 0) {
                 minX = minX / 2;
                 maxX = minX; 
@@ -318,13 +419,12 @@
             world.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
         }
 
-        // Lógica de arrastar a tela
+        // Sistema de Panning via Pointer Events
         function setupPanGestures() {
             let isDragging = false;
             let startX, startY, startPanX, startPanY;
 
             function onPointerDown(e) {
-                // Evita arrastar o mapa se clicar no HUD inferior
                 if (e.target.closest('#hud')) return; 
                 isDragging = true;
                 startX = e.clientX || (e.touches && e.touches[0].clientX);
