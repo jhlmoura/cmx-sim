@@ -45,6 +45,36 @@
       "fundoAltura": 1300,
       "miniaturaLargura": 211,
       "miniaturaAltura": 47
+    },
+    {
+  "id": "dummy-slope",
+  "nome": "Dummy Slope",
+  "ladoA": "mapas/Dummy Slope A.webp",
+  "ladoB": "mapas/Dummy Slope B.webp",
+  "fundo": "mapas/Dummy Slope Fundo.webp",
+  "miniaturaA": "mapas/Dummy Slope Mini A.webp",
+  "miniaturaB": "mapas/Dummy Slope Mini B.webp",
+  "largura": 1600,
+  "altura": 1600,
+  "fundoLargura": 1200,
+  "fundoAltura": 1200,
+  "miniaturaLargura": 211,
+  "miniaturaAltura": 47
+    },
+    {
+  "id": "metamine",
+  "nome": "Metamine",
+  "ladoA": "mapas/Metamine A.webp",
+  "ladoB": "mapas/Metamine B.webp",
+  "fundo": "mapas/Metamine Fundo.webp",
+  "miniaturaA": "mapas/Metamine Mini A.webp",
+  "miniaturaB": "mapas/Metamine Mini B.webp",
+  "largura": 1800,
+  "altura": 1800,
+  "fundoLargura": 1300,
+  "fundoAltura": 1300,
+  "miniaturaLargura": 211,
+  "miniaturaAltura": 47
     }
   ]
 }
