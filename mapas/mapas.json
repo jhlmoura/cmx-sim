@@ -30,6 +30,21 @@
       "fundoAltura": 1300,
       "miniaturaLargura": 211,
       "miniaturaAltura": 47
+    },
+    {
+      "id": "dragon",
+      "nome": "Dragon",
+      "ladoA": "mapas/Dragon A.webp",
+      "ladoB": "mapas/Dragon B.webp",
+      "fundo": "mapas/Dragon Fundo.webp",
+      "miniaturaA": "mapas/Dragon Mini A.webp",
+      "miniaturaB": "mapas/Dragon Mini B.webp",
+      "largura": 2000,
+      "altura": 2000,
+      "fundoLargura": 1300,
+      "fundoAltura": 1300,
+      "miniaturaLargura": 211,
+      "miniaturaAltura": 47
     }
   ]
 }
