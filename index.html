@@ -15,7 +15,7 @@
         </div>
     </div>
 
-    <!-- Novo HUD Modularizado -->
+    <!-- HUD Inferior -->
     <div id="hud">
         
         <!-- Esquerda: Minimapa / Seletor -->
@@ -31,48 +31,51 @@
             </div>
         </div>
 
-        <!-- Centro-Esquerda: Círculo (Vento e Ângulo) -->
-        <div class="hud-section-center-circle">
-            <!-- Cone azul indicando limite de ângulo (Exemplo estático por enquanto) -->
-            <div class="angle-protractor"></div>
+        <!-- Centro: Roleta Radial (Vento, Tiros, Satélites) -->
+        <div class="hud-section-center">
             
-            <!-- Bolinha central do vento -->
-            <div class="wind-circle" title="Vento: Força e Direção">
-                12 <!-- Força do vento de teste -->
+            <!-- Disco Base -->
+            <div class="main-dial">
+                
+                <!-- Transferidor Azul (Ângulo do mobile) -->
+                <div class="angle-protractor"></div>
+
+                <!-- Botões de Tiro (Curvados na esquerda) -->
+                <div class="dial-button btn-t1 active" title="Tiro 1"><span>1</span></div>
+                <div class="dial-button btn-t2" title="Tiro 2"><span>2</span></div>
+                <div class="dial-button btn-ss" title="SS"><span>SS</span></div>
+
+                <!-- Botões de Satélites e Itens (Pontos na direita) -->
+                <div class="satellite-btn sat-moon" title="Força Moon/Lua"></div>
+                <div class="satellite-btn sat-tornado" title="Tornado"></div>
+                <div class="satellite-btn sat-force" title="Pilar de Força"></div>
+                
+                <!-- Botão Menor de Opções (Base Direita) -->
+                <div class="satellite-btn sat-options" title="Opções">
+                    <span style="font-size:8px;">OPT</span>
+                </div>
+
+                <!-- Vento e Números (Centro Escuro) -->
+                <div class="wind-circle" title="Vento: Força 07">
+                    
+                    <div class="wind-arrow-container">
+                        <div class="wind-arrow"></div>
+                    </div>
+                    
+                    <div class="wind-number">07</div>
+                </div>
+
             </div>
+
         </div>
 
-        <!-- Centro-Direita: Tiros e Itens -->
-        <div class="hud-section-items">
-            <!-- Fileira de cima (Tiros: T1, T2, SS) -->
-            <div class="item-row">
-                <span class="slot-label">F1</span>
-                <div class="hud-slot slot-active" title="Tiro 1">1</div>
-                <div class="hud-slot" title="Tiro 2">2</div>
-                <div class="hud-slot" title="SS">SS</div>
-            </div>
-            
-            <!-- Fileira de baixo (Satélites / Itens) -->
-            <div class="item-row">
-                <span class="slot-label">F8</span>
-                <div class="hud-slot" title="Item 1 (Dual, etc)"></div>
-                <div class="hud-slot" title="Item 2"></div>
-                <div class="hud-slot" title="Item 3"></div>
-                <div class="hud-slot" title="Item 4"></div>
-                <div class="hud-slot" title="Item 5"></div>
-                <div class="hud-slot" title="Item 6"></div>
-            </div>
-        </div>
-
-        <!-- Direita: Força e Mobile -->
+        <!-- Direita: Barra de Força e Carrinho -->
         <div class="hud-section-power">
             <div class="power-bar-container">
                 <div class="power-marks"></div>
-                <!-- Barra que vai encher -->
                 <div class="power-fill" id="power-bar-fill"></div>
             </div>
             
-            <!-- Botão para escolher o carrinho -->
             <div class="mobile-selector" title="Escolher Mobile">
                 Armor
             </div>
@@ -80,7 +83,7 @@
 
     </div>
 
-    <!-- O mesmo Javascript que já estava funcionando -->
+    <!-- O Javascript da mecânica de mapas continua idêntico -->
     <script>
         let mapData = [];
         let currentMapIndex = 0;
@@ -261,6 +264,12 @@
             window.addEventListener('mouseup', onPointerUp);
             gameContainer.addEventListener('touchstart', onPointerDown, {passive: false});
             window.addEventListener('touchmove', onPointerMove, {passive: false});
+            window.addEventListener('touchmove', (e) => {
+                // Impede o scroll natural do mobile na área de jogo
+                if (e.target.closest('#game-container')) {
+                    e.preventDefault();
+                }
+            }, {passive: false});
             window.addEventListener('touchend', onPointerUp);
         }
 
