@@ -8,6 +8,7 @@
 </head>
 <body>
 
+    <!-- Container do Mapa -->
     <div id="game-container">
         <div id="world">
             <div id="fundo-layer"></div>
@@ -15,265 +16,211 @@
         </div>
     </div>
 
-    <!-- HUD Inferior -->
-    <div id="hud">
-        
-        <!-- Esquerda: Minimapa / Seletor -->
-        <div class="hud-section-left">
-            <div id="map-controls">
-                <div id="visual-map-list"></div>
-                <div id="minimap-container">
-                    <div class="click-zone-side" id="click-left" onclick="toggleSide('left')" title="Lado B"></div>
-                    <div class="click-zone-center" onclick="toggleMapList()" title="Trocar Mapa"></div>
-                    <div class="click-zone-side" id="click-right" onclick="toggleSide('right')" title="Lado A"></div>
-                    <div id="arrow-indicator" class="arrow-right"></div>
-                </div>
-            </div>
-        </div>
+    <!-- O HUD VAI SER INJETADO AQUI -->
+    <div id="hud-container"></div>
 
-        <!-- Centro: Roleta Radial (Vento, Tiros, Satélites) -->
-        <div class="hud-section-center">
-            
-            <!-- Disco Base -->
-            <div class="main-dial">
-                
-                <!-- Transferidor Azul (Ângulo do mobile) -->
-                <div class="angle-protractor"></div>
+    <!-- Carrega o módulo do HUD -->
+    <script src="hud.js"></script>
 
-                <!-- Botões de Tiro (Curvados na esquerda) -->
-                <div class="dial-button btn-t1 active" title="Tiro 1"><span>1</span></div>
-                <div class="dial-button btn-t2" title="Tiro 2"><span>2</span></div>
-                <div class="dial-button btn-ss" title="SS"><span>SS</span></div>
-
-                <!-- Botões de Satélites e Itens (Pontos na direita) -->
-                <div class="satellite-btn sat-moon" title="Força Moon/Lua"></div>
-                <div class="satellite-btn sat-tornado" title="Tornado"></div>
-                <div class="satellite-btn sat-force" title="Pilar de Força"></div>
-                
-                <!-- Botão Menor de Opções (Base Direita) -->
-                <div class="satellite-btn sat-options" title="Opções">
-                    <span style="font-size:8px;">OPT</span>
-                </div>
-
-                <!-- Vento e Números (Centro Escuro) -->
-                <div class="wind-circle" title="Vento: Força 07">
-                    
-                    <div class="wind-arrow-container">
-                        <div class="wind-arrow"></div>
-                    </div>
-                    
-                    <div class="wind-number">07</div>
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- Direita: Barra de Força e Carrinho -->
-        <div class="hud-section-power">
-            <div class="power-bar-container">
-                <div class="power-marks"></div>
-                <div class="power-fill" id="power-bar-fill"></div>
-            </div>
-            
-            <div class="mobile-selector" title="Escolher Mobile">
-                Armor
-            </div>
-        </div>
-
-    </div>
-
-    <!-- O Javascript da mecânica de mapas continua idêntico -->
+    <!-- Lógica Principal do Mapa -->
     <script>
-        let mapData = [];
-        let currentMapIndex = 0;
-        let currentSide = 'A'; 
-        let scale = 1;
-        let panX = 0;
-        let panY = 0;
+        // Objeto global para facilitar comunicação entre scripts
+        window.GameApp = {
+            mapData: [],
+            currentMapIndex: 0,
+            currentSide: 'A',
+            scale: 1, panX: 0, panY: 0,
 
-        const gameContainer = document.getElementById('game-container');
-        const world = document.getElementById('world');
-        const fundoLayer = document.getElementById('fundo-layer');
-        const mapaLayer = document.getElementById('mapa-layer');
-        const minimap = document.getElementById('minimap-container');
-        const visualMapList = document.getElementById('visual-map-list');
-        const arrowIndicator = document.getElementById('arrow-indicator');
+            init: async function() {
+                // Manda o HUD construir a interface na tela
+                GunboundHUD.render('hud-container');
 
-        async function init() {
-            try {
-                const response = await fetch('mapas/mapas.json?v=' + new Date().getTime());
-                if (!response.ok) throw new Error(`Erro ${response.status}`);
+                try {
+                    const response = await fetch('mapas/mapas.json?v=' + new Date().getTime());
+                    if (!response.ok) throw new Error(`Erro ${response.status}`);
 
-                const data = await response.json();
-                mapData = data.mapas;
+                    const data = await response.json();
+                    this.mapData = data.mapas;
 
-                buildVisualMapList();
+                    this.buildVisualMapList();
 
-                if (mapData.length > 0) {
-                    loadMap();
-                }
-
-                window.addEventListener('resize', () => {
-                    if (mapData.length > 0) {
-                        calculateScale();
-                        updateTransform();
+                    if (this.mapData.length > 0) {
+                        this.loadMap();
                     }
-                });
 
-                setupPanGestures();
+                    window.addEventListener('resize', () => {
+                        if (this.mapData.length > 0) {
+                            this.calculateScale();
+                            this.updateTransform();
+                        }
+                    });
 
-                document.addEventListener('mousedown', (e) => {
-                    if (!e.target.closest('#map-controls') && visualMapList.style.display === 'grid') {
-                        visualMapList.style.display = 'none';
-                    }
-                });
+                    this.setupPanGestures();
 
-            } catch (error) {
-                console.error("Erro ao carregar mapas:", error);
-            }
-        }
+                    // Fechar lista suspensa ao clicar fora
+                    document.addEventListener('mousedown', (e) => {
+                        const visualMapList = document.getElementById('visual-map-list');
+                        if (visualMapList && !e.target.closest('#map-controls') && visualMapList.style.display === 'grid') {
+                            visualMapList.style.display = 'none';
+                        }
+                    });
 
-        function buildVisualMapList() {
-            visualMapList.innerHTML = '';
-            mapData.forEach((mapa, index) => {
-                const card = document.createElement('div');
-                card.className = 'map-item-card';
-                card.onclick = () => selectMap(index);
-
-                const preview = document.createElement('div');
-                preview.className = 'map-item-preview';
-                let previewSrc = mapa.miniaturaA || mapa.miniatura;
-                preview.style.backgroundImage = `url('${previewSrc}')`;
-
-                const nameLabel = document.createElement('div');
-                nameLabel.className = 'map-item-name';
-                nameLabel.textContent = mapa.nome;
-
-                card.appendChild(preview);
-                card.appendChild(nameLabel);
-                visualMapList.appendChild(card);
-            });
-        }
-
-        function toggleMapList() {
-            visualMapList.style.display = visualMapList.style.display === 'grid' ? 'none' : 'grid';
-        }
-
-        function selectMap(index) {
-            currentMapIndex = index;
-            currentSide = 'A'; 
-            visualMapList.style.display = 'none';
-            loadMap();
-        }
-
-        function toggleSide(clickedSide) {
-            if (mapData.length === 0) return;
-            if (currentSide === 'A' && clickedSide === 'right') currentSide = 'B';
-            else if (currentSide === 'B' && clickedSide === 'left') currentSide = 'A';
-            updateMapVisuals();
-        }
-
-        function loadMap() {
-            const map = mapData[currentMapIndex];
-            world.style.width = map.largura + 'px';
-            world.style.height = map.altura + 'px';
-            minimap.style.width = map.miniaturaLargura + 'px';
-            minimap.style.height = map.miniaturaAltura + 'px';
-            fundoLayer.style.backgroundImage = `url('${map.fundo}')`;
-
-            calculateScale();
-            panX = 0;
-            panY = 0; 
-            updateMapVisuals();
-            updateTransform();
-        }
-
-        function updateMapVisuals() {
-            const map = mapData[currentMapIndex];
-            const imgSrc = currentSide === 'A' ? map.ladoA : map.ladoB;
-            let miniSrc = currentSide === 'A' ? (map.miniaturaA || map.miniatura) : (map.miniaturaB || map.miniatura);
-            
-            mapaLayer.style.backgroundImage = `url('${imgSrc}')`;
-            minimap.style.backgroundImage = `url('${miniSrc}')`;
-
-            const clickLeft = document.getElementById('click-left');
-            const clickRight = document.getElementById('click-right');
-
-            if (currentSide === 'A') {
-                arrowIndicator.className = 'arrow-right';
-                clickLeft.style.display = 'none';  
-                clickRight.style.display = 'block'; 
-            } else {
-                arrowIndicator.className = 'arrow-left';
-                clickLeft.style.display = 'block'; 
-                clickRight.style.display = 'none'; 
-            }
-        }
-
-        function calculateScale() {
-            const map = mapData[currentMapIndex];
-            scale = gameContainer.clientHeight / map.altura;
-        }
-
-        function updateTransform() {
-            const map = mapData[currentMapIndex];
-            const cw = gameContainer.clientWidth;
-            const ch = gameContainer.clientHeight;
-
-            const scaledWidth = map.largura * scale;
-            const scaledHeight = map.altura * scale;
-
-            let minX = cw - scaledWidth, maxX = 0;
-            let minY = ch - scaledHeight, maxY = 0;
-
-            if (minX > 0) { minX = minX / 2; maxX = minX; }
-            if (minY > 0) { minY = minY / 2; maxY = minY; }
-
-            panX = Math.max(minX, Math.min(maxX, panX));
-            panY = Math.max(minY, Math.min(maxY, panY));
-            world.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
-        }
-
-        function setupPanGestures() {
-            let isDragging = false;
-            let startX, startY, startPanX, startPanY;
-
-            function onPointerDown(e) {
-                if (e.target.closest('#hud')) return; 
-                isDragging = true;
-                startX = e.clientX || (e.touches && e.touches[0].clientX);
-                startY = e.clientY || (e.touches && e.touches[0].clientY);
-                startPanX = panX;
-                startPanY = panY;
-            }
-
-            function onPointerMove(e) {
-                if (!isDragging) return;
-                const currentX = e.clientX || (e.touches && e.touches[0].clientX);
-                const currentY = e.clientY || (e.touches && e.touches[0].clientY);
-                panX = startPanX + (currentX - startX);
-                panY = startPanY + (currentY - startY);
-                updateTransform();
-            }
-
-            function onPointerUp() { isDragging = false; }
-
-            gameContainer.addEventListener('mousedown', onPointerDown);
-            window.addEventListener('mousemove', onPointerMove);
-            window.addEventListener('mouseup', onPointerUp);
-            gameContainer.addEventListener('touchstart', onPointerDown, {passive: false});
-            window.addEventListener('touchmove', onPointerMove, {passive: false});
-            window.addEventListener('touchmove', (e) => {
-                // Impede o scroll natural do mobile na área de jogo
-                if (e.target.closest('#game-container')) {
-                    e.preventDefault();
+                } catch (error) {
+                    console.error("Erro ao carregar mapas:", error);
                 }
-            }, {passive: false});
-            window.addEventListener('touchend', onPointerUp);
-        }
+            },
 
-        window.onload = init;
+            buildVisualMapList: function() {
+                const visualMapList = document.getElementById('visual-map-list');
+                if(!visualMapList) return;
+                
+                visualMapList.innerHTML = '';
+                this.mapData.forEach((mapa, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'map-item-card';
+                    card.onclick = () => this.selectMap(index);
+
+                    const preview = document.createElement('div');
+                    preview.className = 'map-item-preview';
+                    let previewSrc = mapa.miniaturaA || mapa.miniatura;
+                    preview.style.backgroundImage = `url('${previewSrc}')`;
+
+                    const nameLabel = document.createElement('div');
+                    nameLabel.className = 'map-item-name';
+                    nameLabel.textContent = mapa.nome;
+
+                    card.appendChild(preview);
+                    card.appendChild(nameLabel);
+                    visualMapList.appendChild(card);
+                });
+            },
+
+            toggleMapList: function() {
+                const visualMapList = document.getElementById('visual-map-list');
+                if(visualMapList) {
+                    visualMapList.style.display = visualMapList.style.display === 'grid' ? 'none' : 'grid';
+                }
+            },
+
+            selectMap: function(index) {
+                this.currentMapIndex = index;
+                this.currentSide = 'A'; 
+                document.getElementById('visual-map-list').style.display = 'none';
+                this.loadMap();
+            },
+
+            toggleSide: function(clickedSide) {
+                if (this.mapData.length === 0) return;
+                if (this.currentSide === 'A' && clickedSide === 'right') this.currentSide = 'B';
+                else if (this.currentSide === 'B' && clickedSide === 'left') this.currentSide = 'A';
+                this.updateMapVisuals();
+            },
+
+            loadMap: function() {
+                const map = this.mapData[this.currentMapIndex];
+                const world = document.getElementById('world');
+                const minimap = document.getElementById('minimap-container');
+                const fundoLayer = document.getElementById('fundo-layer');
+                
+                world.style.width = map.largura + 'px';
+                world.style.height = map.altura + 'px';
+                minimap.style.width = map.miniaturaLargura + 'px';
+                minimap.style.height = map.miniaturaAltura + 'px';
+                fundoLayer.style.backgroundImage = `url('${map.fundo}')`;
+
+                this.calculateScale();
+                this.panX = 0; this.panY = 0; 
+                this.updateMapVisuals();
+                this.updateTransform();
+            },
+
+            updateMapVisuals: function() {
+                const map = this.mapData[this.currentMapIndex];
+                const imgSrc = this.currentSide === 'A' ? map.ladoA : map.ladoB;
+                let miniSrc = this.currentSide === 'A' ? (map.miniaturaA || map.miniatura) : (map.miniaturaB || map.miniatura);
+                
+                document.getElementById('mapa-layer').style.backgroundImage = `url('${imgSrc}')`;
+                document.getElementById('minimap-container').style.backgroundImage = `url('${miniSrc}')`;
+
+                const clickLeft = document.getElementById('click-left');
+                const clickRight = document.getElementById('click-right');
+                const arrowIndicator = document.getElementById('arrow-indicator');
+
+                if (this.currentSide === 'A') {
+                    arrowIndicator.className = 'arrow-right';
+                    clickLeft.style.display = 'none';  
+                    clickRight.style.display = 'block'; 
+                } else {
+                    arrowIndicator.className = 'arrow-left';
+                    clickLeft.style.display = 'block'; 
+                    clickRight.style.display = 'none'; 
+                }
+            },
+
+            calculateScale: function() {
+                const map = this.mapData[this.currentMapIndex];
+                const gameContainer = document.getElementById('game-container');
+                this.scale = gameContainer.clientHeight / map.altura;
+            },
+
+            updateTransform: function() {
+                const map = this.mapData[this.currentMapIndex];
+                const gameContainer = document.getElementById('game-container');
+                const cw = gameContainer.clientWidth;
+                const ch = gameContainer.clientHeight;
+
+                const scaledWidth = map.largura * this.scale;
+                const scaledHeight = map.altura * this.scale;
+
+                let minX = cw - scaledWidth, maxX = 0;
+                let minY = ch - scaledHeight, maxY = 0;
+
+                if (minX > 0) { minX = minX / 2; maxX = minX; }
+                if (minY > 0) { minY = minY / 2; maxY = minY; }
+
+                this.panX = Math.max(minX, Math.min(maxX, this.panX));
+                this.panY = Math.max(minY, Math.min(maxY, this.panY));
+                
+                document.getElementById('world').style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.scale})`;
+            },
+
+            setupPanGestures: function() {
+                let isDragging = false;
+                let startX, startY, startPanX, startPanY;
+                const gameContainer = document.getElementById('game-container');
+
+                const onPointerDown = (e) => {
+                    if (e.target.closest('#hud-wrapper')) return; 
+                    isDragging = true;
+                    startX = e.clientX || (e.touches && e.touches[0].clientX);
+                    startY = e.clientY || (e.touches && e.touches[0].clientY);
+                    startPanX = this.panX;
+                    startPanY = this.panY;
+                };
+
+                const onPointerMove = (e) => {
+                    if (!isDragging) return;
+                    const currentX = e.clientX || (e.touches && e.touches[0].clientX);
+                    const currentY = e.clientY || (e.touches && e.touches[0].clientY);
+                    this.panX = startPanX + (currentX - startX);
+                    this.panY = startPanY + (currentY - startY);
+                    this.updateTransform();
+                };
+
+                const onPointerUp = () => { isDragging = false; };
+
+                gameContainer.addEventListener('mousedown', onPointerDown);
+                window.addEventListener('mousemove', onPointerMove);
+                window.addEventListener('mouseup', onPointerUp);
+                
+                gameContainer.addEventListener('touchstart', onPointerDown, {passive: false});
+                window.addEventListener('touchmove', onPointerMove, {passive: false});
+                window.addEventListener('touchend', onPointerUp);
+            }
+        };
+
+        // Inicia tudo quando a página carrega
+        window.onload = () => window.GameApp.init();
     </script>
 </body>
 </html>
