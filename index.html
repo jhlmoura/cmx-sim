@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Gunbound Web Simulator</title>
-    <!-- Vinculando o CSS Externo -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -16,19 +15,72 @@
         </div>
     </div>
 
+    <!-- Novo HUD Modularizado -->
     <div id="hud">
-        <div id="map-controls">
-            <div id="visual-map-list"></div>
-
-            <div id="minimap-container">
-                <div class="click-zone-side" id="click-left" onclick="toggleSide('left')" title="Lado B"></div>
-                <div class="click-zone-center" onclick="toggleMapList()" title="Trocar Mapa"></div>
-                <div class="click-zone-side" id="click-right" onclick="toggleSide('right')" title="Lado A"></div>
-                <div id="arrow-indicator" class="arrow-right"></div>
+        
+        <!-- Esquerda: Minimapa / Seletor -->
+        <div class="hud-section-left">
+            <div id="map-controls">
+                <div id="visual-map-list"></div>
+                <div id="minimap-container">
+                    <div class="click-zone-side" id="click-left" onclick="toggleSide('left')" title="Lado B"></div>
+                    <div class="click-zone-center" onclick="toggleMapList()" title="Trocar Mapa"></div>
+                    <div class="click-zone-side" id="click-right" onclick="toggleSide('right')" title="Lado A"></div>
+                    <div id="arrow-indicator" class="arrow-right"></div>
+                </div>
             </div>
         </div>
+
+        <!-- Centro-Esquerda: Círculo (Vento e Ângulo) -->
+        <div class="hud-section-center-circle">
+            <!-- Cone azul indicando limite de ângulo (Exemplo estático por enquanto) -->
+            <div class="angle-protractor"></div>
+            
+            <!-- Bolinha central do vento -->
+            <div class="wind-circle" title="Vento: Força e Direção">
+                12 <!-- Força do vento de teste -->
+            </div>
+        </div>
+
+        <!-- Centro-Direita: Tiros e Itens -->
+        <div class="hud-section-items">
+            <!-- Fileira de cima (Tiros: T1, T2, SS) -->
+            <div class="item-row">
+                <span class="slot-label">F1</span>
+                <div class="hud-slot slot-active" title="Tiro 1">1</div>
+                <div class="hud-slot" title="Tiro 2">2</div>
+                <div class="hud-slot" title="SS">SS</div>
+            </div>
+            
+            <!-- Fileira de baixo (Satélites / Itens) -->
+            <div class="item-row">
+                <span class="slot-label">F8</span>
+                <div class="hud-slot" title="Item 1 (Dual, etc)"></div>
+                <div class="hud-slot" title="Item 2"></div>
+                <div class="hud-slot" title="Item 3"></div>
+                <div class="hud-slot" title="Item 4"></div>
+                <div class="hud-slot" title="Item 5"></div>
+                <div class="hud-slot" title="Item 6"></div>
+            </div>
+        </div>
+
+        <!-- Direita: Força e Mobile -->
+        <div class="hud-section-power">
+            <div class="power-bar-container">
+                <div class="power-marks"></div>
+                <!-- Barra que vai encher -->
+                <div class="power-fill" id="power-bar-fill"></div>
+            </div>
+            
+            <!-- Botão para escolher o carrinho -->
+            <div class="mobile-selector" title="Escolher Mobile">
+                Armor
+            </div>
+        </div>
+
     </div>
 
+    <!-- O mesmo Javascript que já estava funcionando -->
     <script>
         let mapData = [];
         let currentMapIndex = 0;
@@ -48,10 +100,7 @@
         async function init() {
             try {
                 const response = await fetch('mapas/mapas.json?v=' + new Date().getTime());
-                
-                if (!response.ok) {
-                    throw new Error(`Erro ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`Erro ${response.status}`);
 
                 const data = await response.json();
                 mapData = data.mapas;
@@ -79,7 +128,6 @@
 
             } catch (error) {
                 console.error("Erro ao carregar mapas:", error);
-                alert("Falha ao ler mapas/mapas.json.");
             }
         }
 
@@ -92,7 +140,6 @@
 
                 const preview = document.createElement('div');
                 preview.className = 'map-item-preview';
-                
                 let previewSrc = mapa.miniaturaA || mapa.miniatura;
                 preview.style.backgroundImage = `url('${previewSrc}')`;
 
@@ -107,11 +154,7 @@
         }
 
         function toggleMapList() {
-            if (visualMapList.style.display === 'grid') {
-                visualMapList.style.display = 'none';
-            } else {
-                visualMapList.style.display = 'grid';
-            }
+            visualMapList.style.display = visualMapList.style.display === 'grid' ? 'none' : 'grid';
         }
 
         function selectMap(index) {
@@ -123,31 +166,22 @@
 
         function toggleSide(clickedSide) {
             if (mapData.length === 0) return;
-            
-            if (currentSide === 'A' && clickedSide === 'right') {
-                currentSide = 'B';
-                updateMapVisuals();
-            } else if (currentSide === 'B' && clickedSide === 'left') {
-                currentSide = 'A';
-                updateMapVisuals();
-            }
+            if (currentSide === 'A' && clickedSide === 'right') currentSide = 'B';
+            else if (currentSide === 'B' && clickedSide === 'left') currentSide = 'A';
+            updateMapVisuals();
         }
 
         function loadMap() {
             const map = mapData[currentMapIndex];
-            
             world.style.width = map.largura + 'px';
             world.style.height = map.altura + 'px';
-
             minimap.style.width = map.miniaturaLargura + 'px';
             minimap.style.height = map.miniaturaAltura + 'px';
-
             fundoLayer.style.backgroundImage = `url('${map.fundo}')`;
 
             calculateScale();
             panX = 0;
             panY = 0; 
-
             updateMapVisuals();
             updateTransform();
         }
@@ -155,7 +189,6 @@
         function updateMapVisuals() {
             const map = mapData[currentMapIndex];
             const imgSrc = currentSide === 'A' ? map.ladoA : map.ladoB;
-            
             let miniSrc = currentSide === 'A' ? (map.miniaturaA || map.miniatura) : (map.miniaturaB || map.miniatura);
             
             mapaLayer.style.backgroundImage = `url('${imgSrc}')`;
@@ -177,8 +210,7 @@
 
         function calculateScale() {
             const map = mapData[currentMapIndex];
-            const containerHeight = gameContainer.clientHeight;
-            scale = containerHeight / map.altura;
+            scale = gameContainer.clientHeight / map.altura;
         }
 
         function updateTransform() {
@@ -189,23 +221,14 @@
             const scaledWidth = map.largura * scale;
             const scaledHeight = map.altura * scale;
 
-            let minX = cw - scaledWidth;
-            let maxX = 0;
-            let minY = ch - scaledHeight;
-            let maxY = 0;
+            let minX = cw - scaledWidth, maxX = 0;
+            let minY = ch - scaledHeight, maxY = 0;
 
-            if (minX > 0) {
-                minX = minX / 2;
-                maxX = minX; 
-            }
-            if (minY > 0) {
-                minY = minY / 2;
-                maxY = minY;
-            }
+            if (minX > 0) { minX = minX / 2; maxX = minX; }
+            if (minY > 0) { minY = minY / 2; maxY = minY; }
 
             panX = Math.max(minX, Math.min(maxX, panX));
             panY = Math.max(minY, Math.min(maxY, panY));
-
             world.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
         }
 
@@ -226,23 +249,16 @@
                 if (!isDragging) return;
                 const currentX = e.clientX || (e.touches && e.touches[0].clientX);
                 const currentY = e.clientY || (e.touches && e.touches[0].clientY);
-                
-                const dx = currentX - startX;
-                const dy = currentY - startY;
-
-                panX = startPanX + dx;
-                panY = startPanY + dy;
+                panX = startPanX + (currentX - startX);
+                panY = startPanY + (currentY - startY);
                 updateTransform();
             }
 
-            function onPointerUp() {
-                isDragging = false;
-            }
+            function onPointerUp() { isDragging = false; }
 
             gameContainer.addEventListener('mousedown', onPointerDown);
             window.addEventListener('mousemove', onPointerMove);
             window.addEventListener('mouseup', onPointerUp);
-
             gameContainer.addEventListener('touchstart', onPointerDown, {passive: false});
             window.addEventListener('touchmove', onPointerMove, {passive: false});
             window.addEventListener('touchend', onPointerUp);
