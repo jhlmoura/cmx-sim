@@ -105,6 +105,36 @@
   "fundoAltura": 1300,
   "miniaturaLargura": 211,
   "miniaturaAltura": 47
+},
+    {
+  "id": "nirvana",
+  "nome": "Nirvana",
+  "ladoA": "mapas/Nirvana A.webp",
+  "ladoB": "mapas/Nirvana B.webp",
+  "fundo": "mapas/Nirvana Fundo.webp",
+  "miniaturaA": "mapas/Nirvana Mini A.webp",
+  "miniaturaB": "mapas/Nirvana Mini B.webp",
+  "largura": 1800,
+  "altura": 1800,
+  "fundoLargura": 1300,
+  "fundoAltura": 1300,
+  "miniaturaLargura": 211,
+  "miniaturaAltura": 47
+},
+{
+  "id": "sea-of-hero",
+  "nome": "Sea of Hero",
+  "ladoA": "mapas/Sea of Hero A.webp",
+  "ladoB": "mapas/Sea of Hero B.webp",
+  "fundo": "mapas/Sea of Hero Fundo.webp",
+  "miniaturaA": "mapas/Sea of Hero Mini A.webp",
+  "miniaturaB": "mapas/Sea of Hero Mini B.webp",
+  "largura": 1800,
+  "altura": 1800,
+  "fundoLargura": 1300,
+  "fundoAltura": 1300,
+  "miniaturaLargura": 211,
+  "miniaturaAltura": 47
 }
   ]
 }
