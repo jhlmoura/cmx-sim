@@ -75,6 +75,36 @@
   "fundoAltura": 1300,
   "miniaturaLargura": 211,
   "miniaturaAltura": 47
-    }
+    },
+    {
+  "id": "metropolis",
+  "nome": "Metropolis",
+  "ladoA": "mapas/Metropolis A.webp",
+  "ladoB": "mapas/Metropolis B.webp",
+  "fundo": "mapas/Metropolis Fundo.webp",
+  "miniaturaA": "mapas/Metropolis Mini A.webp",
+  "miniaturaB": "mapas/Metropolis Mini B.webp",
+  "largura": 1800,
+  "altura": 1800,
+  "fundoLargura": 1300,
+  "fundoAltura": 1300,
+  "miniaturaLargura": 211,
+  "miniaturaAltura": 47
+    },
+    {
+  "id": "miramo",
+  "nome": "Miramo",
+  "ladoA": "mapas/Miramo A.webp",
+  "ladoB": "mapas/Miramo B.webp",
+  "fundo": "mapas/Miramo Fundo.webp",
+  "miniaturaA": "mapas/Miramo Mini A.webp",
+  "miniaturaB": "mapas/Miramo Mini B.webp",
+  "largura": 1800,
+  "altura": 1800,
+  "fundoLargura": 1300,
+  "fundoAltura": 1300,
+  "miniaturaLargura": 211,
+  "miniaturaAltura": 47
+}
   ]
 }
