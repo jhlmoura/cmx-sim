@@ -18,7 +18,7 @@
     {
       "id": "cave",
       "nome": "Cave",
-      "ladoA": "mapas/Cave A.webp",
+      "ladoA": "mapas/Cave.webp",
       "fundo": "mapas/Cave Fundo.webp",
       "miniaturaA": "mapas/Cave Mini A.webp",
       "largura": 1800,
@@ -72,11 +72,9 @@
     {
       "id": "dragon-evento",
       "nome": "Dragon Evento",
-      "ladoA": "mapas/Dragon Evento A.webp",
-      "ladoB": "mapas/Dragon Evento B.webp",
+      "ladoA": "mapas/Dragon Evento.webp",
       "fundo": "mapas/Dragon Evento Fundo.webp",
       "miniaturaA": "mapas/Dragon Evento Mini A.webp",
-      "miniaturaB": "mapas/Dragon Evento Mini B.webp",
       "largura": 1800,
       "altura": 1800,
       "fundoLargura": 1300,
