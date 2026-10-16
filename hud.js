@@ -1,273 +1,653 @@
-const GunboundHUD = {
-    // 1. O Estado do HUD
-    state: {
-        shot: 1,           
-        windForce: 7,      
-        windAngle: 45      
-    },
 
-    // 2. O CSS exclusivo do HUD - Consertando a Harmonia dos Botões
-    styles: `
-        #hud-wrapper {
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            height: 90px;
-            background: #232d3b; 
-            border-top: 2px solid #141a24;
-            display: flex; align-items: center; justify-content: flex-start;
-            padding: 0 10px; z-index: 200;
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            user-select: none;
-        }
+/* =====================================================
+   GUNBOUND HUD — REFINAMENTO VISUAL
+   Layout equilibrado, compacto e responsivo
+   ===================================================== */
 
-        /* --- Esquerda --- */
-        .hud-section-left { display: flex; align-items: center; width: 220px; }
-        #map-controls { background: #0d1117; padding: 8px; border-radius: 6px; border: 1px solid #06080b; box-shadow: 0 2px 4px rgba(0,0,0,0.8); position: relative; }
-        #minimap-container { position: relative; background-color: #000; border: 2px solid #3a4354; border-radius: 4px; background-size: 100% 100%; background-repeat: no-repeat; min-width: 180px; min-height: 42px; display: flex; overflow: hidden; }
-        .click-zone-side { width: 25px; height: 100%; cursor: pointer; z-index: 10; }
-        .click-zone-center { flex-grow: 1; height: 100%; cursor: pointer; z-index: 10; }
-        #arrow-indicator { position: absolute; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-style: solid; pointer-events: none; filter: drop-shadow(0px 0px 2px rgba(0,0,0,0.8)); z-index: 5; }
-        .arrow-right { right: 4px; border-width: 5px 0 5px 7px; border-color: transparent transparent transparent #f2a900; }
-        .arrow-left { left: 4px; border-width: 5px 7px 5px 0; border-color: transparent #f2a900 transparent transparent; }
+#hud-wrapper {
+    --hud-bg: #c5c9c8;
+    --hud-panel: #a9b0b3;
+    --hud-border: #41494f;
+    --hud-dark: #263442;
+    --hud-text: #17212b;
+    --hud-yellow: #f6c400;
+    --hud-highlight: #fff0a6;
 
-        /* --- Menu Visual --- */
-        #visual-map-list { position: absolute; bottom: 100%; left: 0; margin-bottom: 5px; background: rgba(17, 21, 30, 0.95); border: 1px solid #3a4354; border-radius: 8px; padding: 10px; box-shadow: 0 -4px 15px rgba(0,0,0,0.8); display: none; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; width: max-content; max-width: 70vw; max-height: 50vh; overflow-y: auto; z-index: 300; }
-        #visual-map-list::-webkit-scrollbar { width: 6px; }
-        #visual-map-list::-webkit-scrollbar-thumb { background: #3a4354; border-radius: 4px; }
-        .map-item-card { background: #000; border: 2px solid #2b3240; border-radius: 4px; cursor: pointer; text-align: center; color: #fff; }
-        .map-item-card:hover { border-color: #f2a900; transform: translateY(-2px); }
-        .map-item-preview { width: 100%; height: 35px; background-size: 100% 100%; border-bottom: 1px solid #2b3240; }
-        .map-item-name { padding: 4px; font-size: 11px; color: #ccc; font-weight: bold; }
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 200;
 
-        /* ================================================= */
-        /* --- Roleta Central (CORRIGINDO A HARMONIA) ---    */
-        /* ================================================= */
-        .hud-section-center { position: relative; width: 160px; height: 120px; margin-top: -30px; margin-left: 20px; display: flex; justify-content: center; align-items: center; z-index: 250; }
-        
-        .main-dial { 
-            position: relative; 
-            width: 140px; 
-            height: 140px; 
-            background: #d1cfc0; 
-            border-radius: 50%; 
-            border: 1px solid #111; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 0 15px rgba(255,255,255,0.2); 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-        }
-        
-        .dial-dark-bg { position: absolute; left: 0; top: 50%; width: 50%; height: 50%; background: #475a6e; border-bottom-left-radius: 140px; z-index: 1; }
+    height: 96px;
+    box-sizing: border-box;
+    padding: 8px 16px;
 
-        /* Base para os botões "espremidos" (Efeito Leque) */
-        .dial-button { 
-            position: absolute; 
-            width: 55px; 
-            height: 60px; /* Um pouco mais altos para serem cortados pelo círculo negro */
-            background: #e1decb; 
-            border: 2px solid #222; /* Borda mais grossa igual à imagem */
-            border-radius: 50% 50% 0 0; /* A base fica quadrada pois o círculo escuro cobre */
-            display: flex; 
-            justify-content: center; 
-            align-items: flex-start; 
-            padding-top: 6px; 
-            font-size: 16px; 
-            font-weight: 900; /* Mais negrito */
-            color: #1a2a3a; 
-            cursor: pointer; 
-            transform-origin: center 70px; 
-            box-shadow: inset 2px 2px 4px rgba(255,255,255,0.8), inset -2px -2px 4px rgba(0,0,0,0.2); 
-            /* Importante: Botões inativos ficam atrás do centro escuro */
-            z-index: 10; 
-            transition: none; /* Remoção da transição para o clique ser instantâneo como no jogo */
-        }
-        
-        .dial-button:hover { filter: brightness(1.1); }
-        
-        /* O Botão ATIVO pula para a frente e engole os outros */
-        .dial-button.active { 
-            background: #f8b800; 
-            color: #111;
-            z-index: 40; /* Pula para cima de tudo, incluindo o círculo central */
-            box-shadow: inset 2px 2px 4px rgba(255,255,255,0.6), inset -2px -2px 6px rgba(0,0,0,0.3), 2px 2px 5px rgba(0,0,0,0.6);
-            /* Escala um pouquinho pra criar a ilusão de sobreposição perfeita */
-            transform-origin: center 70px; 
-        } 
-        
-        /* Ângulos espremidos para o Efeito Leque */
-        .btn-t1 { transform: rotate(-70deg) scale(1.05); top: -10px; left: 42px; } .btn-t1 span { transform: rotate(70deg); }
-        .btn-t2 { transform: rotate(-35deg) scale(1); top: -10px; left: 42px; z-index: 9;} .btn-t2 span { transform: rotate(35deg); }
-        .btn-ss { transform: rotate(0deg) scale(1); top: -10px; left: 42px; z-index: 8; } .btn-ss span { transform: rotate(0deg); font-size: 14px; }
+    display: grid;
+    grid-template-columns: minmax(190px, 1fr) 166px minmax(250px, 1.35fr);
+    align-items: center;
+    gap: 18px;
 
-        /* Satélites (Direita) */
-        .satellite-btn { position: absolute; width: 24px; height: 24px; background: #f8cc00; border-radius: 50%; border: 1px solid #111; cursor: pointer; box-shadow: inset 2px 2px 3px rgba(255,255,255,0.7), inset -2px -2px 4px rgba(0,0,0,0.4), 2px 2px 3px rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; color: #000; z-index: 15; }
-        .satellite-btn:active { transform: scale(0.95); }
-        .sat-1 { top: 18px; right: 8px; }
-        .sat-2 { top: 58px; right: -8px; background: #fff; width: 28px; height: 28px; }
-        .sat-3 { top: 100px; right: 5px; }
-        .sat-options { bottom: -5px; right: 35px; width: 32px; height: 32px; background: #b5bcc6; font-weight: bold; color: #3e4a59; box-shadow: inset 2px 2px 3px rgba(255,255,255,0.9), inset -2px -2px 4px rgba(0,0,0,0.3), 1px 1px 3px rgba(0,0,0,0.5); }
+    background: linear-gradient(
+        180deg,
+        #d0d3d0 0%,
+        #b9c0c1 12%,
+        #969fa4 100%
+    );
 
-        /* Centro Escuro (Cresceu para sobrepor a base dos botões de Tiro) */
-        .wind-circle { 
-            position: relative; 
-            width: 105px; /* Aumentado */
-            height: 105px; /* Aumentado */
-            background: radial-gradient(circle at 30% 30%, #445163, #1e2733 80%); 
-            border-radius: 50%; 
-            border: 2px solid #111; /* Borda mais grossa isolando do resto */
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center; 
-            z-index: 30; /* Fica acima dos botões inativos */
-            box-shadow: inset -5px -5px 15px rgba(0,0,0,0.8), inset 2px 2px 5px rgba(255,255,255,0.1), 0 0 8px rgba(0,0,0,0.8); 
-            cursor: pointer; 
-        }
-        
-        .wind-arrow-container { position: absolute; width: 100%; height: 100%; border-radius: 50%; transform: rotate(45deg); z-index: 15; pointer-events: none; }
-        .wind-arrow { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #f88c00; filter: drop-shadow(0px 0px 2px rgba(255, 150, 0, 0.8)); }
+    border-top: 2px solid #edf0e9;
+    box-shadow:
+        0 -2px 0 #626d74,
+        0 -5px 14px rgb(0 0 0 / 25%);
 
-        #wind-input { width: 60px; background: transparent; border: none; color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 36px; font-weight: 900; text-align: center; text-shadow: 0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.5); outline: none; z-index: 20; cursor: text; margin-top: 5px; }
-        #wind-input::-webkit-outer-spin-button, #wind-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        #wind-input[type=number] { -moz-appearance: textfield; }
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    color: var(--hud-text);
+    user-select: none;
+    box-sizing: border-box;
+}
 
-        /* --- Direita --- */
-        .hud-section-power { width: 350px; display: flex; align-items: center; margin-left: 20px; background: #2f3a47; padding: 6px 10px; border-radius: 2px; border: 1px solid #111; height: 35px; border-top: 1px solid #4a5a6a; }
-        .power-bar-container { flex-grow: 1; height: 18px; background: #2a221b; border: 1px solid #fff; position: relative; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8); }
-        .power-marks { position: absolute; width: 100%; height: 100%; background: repeating-linear-gradient(to right, transparent, transparent 25%, rgba(255,255,255,0.3) 25%, rgba(255,255,255,0.3) 25.5%); pointer-events: none; z-index: 10;}
-        .power-fill { width: 0%; height: 100%; background: linear-gradient(to right, #f8cc00, #d82b00); }
-        .mobile-selector { width: 45px; height: 45px; margin-left: 15px; background: #fff; border: 2px solid #000; border-radius: 4px; display: flex; justify-content: center; align-items: center; font-size: 10px; font-weight: bold; color: #000; cursor: pointer; }
-    `,
+#hud-wrapper *,
+#hud-wrapper *::before,
+#hud-wrapper *::after {
+    box-sizing: border-box;
+}
 
-    // 3. O HTML exclusivo do HUD
-    html: `
-        <div id="hud-wrapper">
-            
-            <div class="hud-section-left">
-                <div id="map-controls">
-                    <div id="visual-map-list"></div>
-                    <div id="minimap-container">
-                        <div class="click-zone-side" id="click-left" onclick="window.GameApp.toggleSide('left')" title="Lado B"></div>
-                        <div class="click-zone-center" onclick="window.GameApp.toggleMapList()" title="Trocar Mapa"></div>
-                        <div class="click-zone-side" id="click-right" onclick="window.GameApp.toggleSide('right')" title="Lado A"></div>
-                        <div id="arrow-indicator" class="arrow-right"></div>
-                    </div>
-                </div>
-            </div>
+/* =====================================================
+   PAINEL ESQUERDO — MAPA
+   ===================================================== */
 
-            <div class="hud-section-center">
-                <div class="main-dial">
-                    <div class="dial-dark-bg"></div>
-                    
-                    <!-- Botões de Tiro: O ativo (amarelo) engole os outros -->
-                    <div class="dial-button btn-t1 active" id="btn-t1" onclick="GunboundHUD.selectShot(1)" title="Tiro 1"><span>1</span></div>
-                    <div class="dial-button btn-t2" id="btn-t2" onclick="GunboundHUD.selectShot(2)" title="Tiro 2"><span>2</span></div>
-                    <div class="dial-button btn-ss" id="btn-tss" onclick="GunboundHUD.selectShot('ss')" title="SS"><span>SS</span></div>
+.hud-section-left {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
 
-                    <!-- Satélites -->
-                    <div class="satellite-btn sat-1" title="Slot 1"></div>
-                    <div class="satellite-btn sat-2" title="Slot 2"></div>
-                    <div class="satellite-btn sat-3" title="Slot 3"></div>
-                    <div class="satellite-btn sat-options" title="Opções"><span style="font-size:9px;">OPT</span></div>
+#map-controls {
+    position: relative;
+    width: 100%;
+    max-width: 260px;
+    padding: 5px;
 
-                    <!-- Círculo Central Escuro (Aumentado) -->
-                    <div class="wind-circle" id="wind-circle-zone" title="Arraste para girar a seta">
-                        <div class="wind-arrow-container" id="wind-arrow-rotator"><div class="wind-arrow"></div></div>
-                        <input type="number" id="wind-input" value="07" min="0" max="26" onchange="GunboundHUD.updateWindForce(this.value)" onblur="GunboundHUD.updateWindForce(this.value)">
-                    </div>
-                </div>
-            </div>
+    background: linear-gradient(#3c4853, #1d2833);
+    border: 1px solid #202a32;
+    border-radius: 4px;
 
-            <div class="hud-section-power">
-                <div class="power-bar-container">
-                    <div class="power-marks"></div>
-                    <div class="power-fill" id="power-bar-fill" style="width: 40%;"></div>
-                </div>
-                <div class="mobile-selector" title="Escolher Mobile">Armor</div>
-            </div>
-        </div>
-    `,
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 25%),
+        0 2px 3px rgb(0 0 0 / 30%);
+}
 
-    // 4. Funções Lógicas
-    selectShot: function(shotType) {
-        document.getElementById('btn-t1').classList.remove('active');
-        document.getElementById('btn-t2').classList.remove('active');
-        document.getElementById('btn-tss').classList.remove('active');
-        
-        this.state.shot = shotType;
-        
-        if(shotType === 1) document.getElementById('btn-t1').classList.add('active');
-        if(shotType === 2) document.getElementById('btn-t2').classList.add('active');
-        if(shotType === 'ss') document.getElementById('btn-tss').classList.add('active');
-    },
+#minimap-container {
+    position: relative;
+    display: flex;
+    width: 100%;
+    aspect-ratio: 211 / 47;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
 
-    updateWindForce: function(val) {
-        let force = parseInt(val);
-        if(isNaN(force)) force = 0;
-        if(force < 0) force = 0;
-        if(force > 26) force = 26; 
-        
-        this.state.windForce = force;
-        
-        let displayVal = force < 10 ? '0' + force : force.toString();
-        document.getElementById('wind-input').value = displayVal;
-    },
+    background-color: #111820;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
 
-    initWindDrag: function() {
-        const circle = document.getElementById('wind-circle-zone');
-        const rotator = document.getElementById('wind-arrow-rotator');
-        let isDragging = false;
+    border: 1px solid #111820;
+    outline: 1px solid #87939b;
+}
 
-        rotator.style.transform = `rotate(${this.state.windAngle}deg)`;
+.click-zone-side {
+    flex: 0 0 12%;
+    height: 100%;
+    cursor: pointer;
+    z-index: 10;
+    transition: background 100ms ease;
+}
 
-        const calculateAngle = (e) => {
-            const rect = circle.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            
-            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+.click-zone-center {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    cursor: pointer;
+    z-index: 10;
+}
 
-            let MathAng = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
-            
-            let cssAng = MathAng + 90;
-            if (cssAng < 0) cssAng += 360;
+.click-zone-side:hover,
+.click-zone-center:hover {
+    background: rgb(255 255 255 / 12%);
+}
 
-            this.state.windAngle = Math.round(cssAng);
-            rotator.style.transform = `rotate(${this.state.windAngle}deg)`;
-        };
+#arrow-indicator {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-style: solid;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 2px #000);
+    z-index: 5;
+}
 
-        const onDown = (e) => {
-            if (e.target.id === 'wind-input') return; 
-            isDragging = true;
-            calculateAngle(e);
-        };
-        const onMove = (e) => {
-            if (!isDragging) return;
-            calculateAngle(e);
-        };
-        const onUp = () => { isDragging = false; };
+.arrow-right {
+    right: 4px;
+    border-width: 5px 0 5px 7px;
+    border-color: transparent transparent transparent var(--hud-yellow);
+}
 
-        circle.addEventListener('mousedown', onDown);
-        window.addEventListener('mousemove', onMove);
-        window.addEventListener('mouseup', onUp);
+.arrow-left {
+    left: 4px;
+    border-width: 5px 7px 5px 0;
+    border-color: transparent var(--hud-yellow) transparent transparent;
+}
 
-        circle.addEventListener('touchstart', onDown, {passive: false});
-        window.addEventListener('touchmove', (e) => {
-            if(isDragging) { e.preventDefault(); onMove(e); }
-        }, {passive: false});
-        window.addEventListener('touchend', onUp);
-    },
+/* Lista de mapas */
 
-    render: function(containerId) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
+#visual-map-list {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 0;
 
-        const styleTag = document.createElement('style');
-        styleTag.innerHTML = this.styles;
-        document.head.appendChild(styleTag);
+    display: none;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
 
-        container.innerHTML = this.html;
-        this.initWindDrag();
+    width: min(560px, 75vw);
+    max-height: 55vh;
+    overflow-y: auto;
+    padding: 10px;
+
+    background: #d0d4d2;
+    border: 2px solid #414b53;
+    border-radius: 5px;
+
+    box-shadow: 0 5px 18px rgb(0 0 0 / 45%);
+    z-index: 300;
+}
+
+#visual-map-list::-webkit-scrollbar {
+    width: 7px;
+}
+
+#visual-map-list::-webkit-scrollbar-thumb {
+    background: #687680;
+    border-radius: 4px;
+}
+
+.map-item-card {
+    min-width: 0;
+    overflow: hidden;
+    cursor: pointer;
+    text-align: center;
+    color: #1d2833;
+
+    background: #edf0ed;
+    border: 2px solid #899398;
+    border-radius: 3px;
+
+    transition: border-color 120ms ease,
+                background 120ms ease;
+}
+
+.map-item-card:hover {
+    border-color: #b28a00;
+    background: #fff6cf;
+}
+
+.map-item-preview {
+    width: 100%;
+    aspect-ratio: 211 / 47;
+    height: auto;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-bottom: 1px solid #8b9498;
+}
+
+.map-item-name {
+    padding: 5px 4px;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 700;
+}
+
+/* =====================================================
+   CENTRO — CONTROLE DE VENTO E TIROS
+   ===================================================== */
+
+.hud-section-center {
+    position: relative;
+    width: 166px;
+    height: 124px;
+    margin: -27px 0 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    justify-self: center;
+    z-index: 250;
+}
+
+.main-dial {
+    position: relative;
+    flex: 0 0 auto;
+    width: 124px;
+    height: 124px;
+    border-radius: 50%;
+
+    background: linear-gradient(145deg, #e4e3d8, #a7afb2);
+    border: 2px solid #35404a;
+
+    box-shadow:
+        inset 0 0 0 3px #d5d8d1,
+        inset 0 -5px 10px rgb(0 0 0 / 20%),
+        0 3px 6px rgb(0 0 0 / 35%);
+}
+
+/* Base escura atrás dos seletores */
+
+.dial-dark-bg {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 215deg,
+        #43576a 0deg,
+        #263544 210deg,
+        #526273 360deg
+    );
+    border: 3px solid #1b2732;
+    z-index: 1;
+}
+
+/* Três seletores com o mesmo tamanho e espaçamento */
+
+.dial-button {
+    position: absolute;
+    top: 8px;
+    width: 30px;
+    height: 27px;
+    padding: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: linear-gradient(#f3f0df, #bfc5c4);
+    color: #1b2835;
+
+    border: 1px solid #17222d;
+    border-radius: 4px;
+
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 90%),
+        0 1px 2px rgb(0 0 0 / 40%);
+
+    cursor: pointer;
+    z-index: 10;
+
+    font-size: 14px;
+    font-weight: 900;
+
+    transition: background 100ms ease,
+                color 100ms ease;
+}
+
+.btn-t1 {
+    left: 9px;
+    transform: none;
+}
+
+.btn-t2 {
+    left: 45px;
+    transform: none;
+}
+
+.btn-ss {
+    left: 81px;
+    transform: none;
+}
+
+.dial-button span {
+    display: inline-block;
+    transform: none;
+}
+
+.btn-ss span {
+    font-size: 11px;
+}
+
+.dial-button:hover {
+    background: #fff5c8;
+}
+
+.dial-button.active {
+    background: linear-gradient(#ffe778, #f4bd00);
+    color: #17212b;
+    border-color: #7a5700;
+
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 90%),
+        0 0 0 1px #f8dc65,
+        0 2px 4px rgb(0 0 0 / 35%);
+
+    z-index: 12;
+}
+
+/* Vento: círculo perfeitamente centralizado */
+
+.wind-circle {
+    position: absolute;
+    left: 50%;
+    top: 68px;
+    transform: translate(-50%, -50%);
+
+    width: 78px;
+    height: 78px;
+    border-radius: 50%;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    background: radial-gradient(
+        circle at 35% 25%,
+        #506276,
+        #263543 65%,
+        #141e29
+    );
+
+    border: 2px solid #111a23;
+
+    box-shadow:
+        inset 0 2px 3px rgb(255 255 255 / 15%),
+        inset 0 -5px 9px rgb(0 0 0 / 45%),
+        0 1px 3px rgb(0 0 0 / 50%);
+
+    cursor: crosshair;
+    z-index: 20;
+}
+
+.wind-arrow-container {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.wind-arrow {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    width: 0;
+    height: 0;
+
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 10px solid #ff9b16;
+
+    filter: drop-shadow(0 0 2px rgb(255 155 22 / 70%));
+}
+
+#wind-input {
+    position: relative;
+    z-index: 2;
+
+    width: 52px;
+    margin: 8px 0 0;
+    padding: 0;
+
+    background: transparent;
+    border: none;
+    outline: none;
+
+    color: #fff;
+    font-family: inherit;
+    font-size: 27px;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+    text-shadow: 0 1px 3px #000;
+
+    cursor: text;
+    user-select: text;
+}
+
+#wind-input::-webkit-inner-spin-button,
+#wind-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+#wind-input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* Satélites distribuídos sem empurrar a roleta */
+
+.satellite-btn {
+    position: absolute;
+    width: 23px;
+    height: 23px;
+    padding: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: linear-gradient(#ffe36a, #e5ad00);
+    color: #18232d;
+
+    border: 1px solid #4b3c0b;
+    border-radius: 50%;
+
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 85%),
+        0 2px 3px rgb(0 0 0 / 35%);
+
+    cursor: pointer;
+    z-index: 30;
+}
+
+.satellite-btn:hover {
+    filter: brightness(1.08);
+}
+
+.satellite-btn:active {
+    transform: scale(.94);
+}
+
+.sat-1 {
+    top: 27px;
+    right: -1px;
+}
+
+.sat-2 {
+    top: 58px;
+    right: -9px;
+    width: 25px;
+    height: 25px;
+    background: linear-gradient(#fff, #cbd2d4);
+}
+
+.sat-3 {
+    top: 88px;
+    right: -1px;
+}
+
+.sat-options {
+    right: 12px;
+    bottom: -5px;
+    top: auto;
+
+    width: 29px;
+    height: 22px;
+    border-radius: 4px;
+
+    background: linear-gradient(#e2e5e3, #9ba5aa);
+    color: #293845;
+    font-size: 9px;
+    font-weight: 900;
+}
+
+/* =====================================================
+   DIREITA — FORÇA E MOBILE
+   ===================================================== */
+
+.hud-section-power {
+    min-width: 0;
+    width: 100%;
+    height: 54px;
+    margin: 0;
+    padding: 7px 9px;
+
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    background: linear-gradient(#d9dcda, #aeb6b8);
+    border: 1px solid #59656d;
+    border-radius: 4px;
+
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 80%),
+        0 2px 3px rgb(0 0 0 / 20%);
+}
+
+.power-bar-container {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    height: 20px;
+    overflow: hidden;
+
+    background: #27313a;
+    border: 1px solid #18212a;
+    border-radius: 2px;
+
+    box-shadow:
+        inset 0 2px 4px rgb(0 0 0 / 50%),
+        0 1px 0 rgb(255 255 255 / 40%);
+}
+
+.power-marks {
+    position: absolute;
+    inset: 0;
+
+    background: repeating-linear-gradient(
+        to right,
+        transparent 0,
+        transparent calc(25% - 1px),
+        rgb(255 255 255 / 55%) calc(25% - 1px),
+        rgb(255 255 255 / 55%) 25%
+    );
+
+    pointer-events: none;
+    z-index: 2;
+}
+
+.power-fill {
+    width: 0%;
+    height: 100%;
+
+    background: linear-gradient(
+        90deg,
+        #e9d400 0%,
+        #f6a900 55%,
+        #df3b22 100%
+    );
+
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 40%);
+    transition: width 100ms linear;
+}
+
+.mobile-selector {
+    flex: 0 0 66px;
+    width: 66px;
+    height: 38px;
+    margin: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+    padding: 3px;
+
+    background: linear-gradient(#f8f8ef, #c6ccca);
+    color: #202b34;
+
+    border: 1px solid #48535a;
+    border-radius: 3px;
+
+    box-shadow:
+        inset 0 1px 0 #fff,
+        0 1px 2px rgb(0 0 0 / 25%);
+
+    font-size: 10px;
+    font-weight: 900;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    cursor: pointer;
+}
+
+.mobile-selector:hover {
+    background: linear-gradient(#fff8ce, #e4d28a);
+}
+
+/* =====================================================
+   RESPONSIVIDADE
+   ===================================================== */
+
+@media (max-width: 760px) {
+    #hud-wrapper {
+        height: 86px;
+        padding: 6px 8px;
+        grid-template-columns: minmax(105px, 1fr) 130px minmax(125px, 1fr);
+        gap: 6px;
     }
-};
+
+    .hud-section-center {
+        transform: scale(.84);
+        transform-origin: center center;
+        margin-top: -22px;
+    }
+
+    .hud-section-power {
+        height: 46px;
+        padding: 5px;
+        gap: 5px;
+    }
+
+    .mobile-selector {
+        flex-basis: 48px;
+        width: 48px;
+        height: 32px;
+        font-size: 9px;
+    }
+
+    #visual-map-list {
+        width: min(420px, 88vw);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 460px) {
+    #hud-wrapper {
+        grid-template-columns: 1fr 112px 1fr;
+        gap: 3px;
+        padding-inline: 4px;
+    }
+
+    .hud-section-center {
+        transform: scale(.72);
+    }
+
+    .mobile-selector {
+        display: none;
+    }
+}
