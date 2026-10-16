@@ -19,10 +19,8 @@
       "id": "cave",
       "nome": "Cave",
       "ladoA": "mapas/Cave A.webp",
-      "ladoB": "mapas/Cave B.webp",
       "fundo": "mapas/Cave Fundo.webp",
       "miniaturaA": "mapas/Cave Mini A.webp",
-      "miniaturaB": "mapas/Cave Mini B.webp",
       "largura": 1800,
       "altura": 1800,
       "fundoLargura": 1300,
@@ -33,17 +31,11 @@
     {
       "id": "copa-do-mundo",
       "nome": "Copa do Mundo",
-      "ladoA": "mapas/Copa do Mundo A.webp",
-      "ladoB": "mapas/Copa do Mundo B.webp",
       "fundo": "mapas/Copa do Mundo Fundo.webp",
-      "miniaturaA": "mapas/Copa do Mundo Mini A.webp",
-      "miniaturaB": "mapas/Copa do Mundo Mini B.webp",
       "largura": 1200,
       "altura": 1200,
       "fundoLargura": 1200,
-      "fundoAltura": 1200,
-      "miniaturaLargura": 211,
-      "miniaturaAltura": 47
+      "fundoAltura": 1200
     },
     {
       "id": "cozytower",
@@ -155,17 +147,11 @@
     {
       "id": "natal",
       "nome": "Natal",
-      "ladoA": "mapas/Natal A.webp",
-      "ladoB": "mapas/Natal B.webp",
       "fundo": "mapas/Natal Fundo.webp",
-      "miniaturaA": "mapas/Natal Mini A.webp",
-      "miniaturaB": "mapas/Natal Mini B.webp",
       "largura": 1300,
       "altura": 1300,
       "fundoLargura": 1300,
-      "fundoAltura": 1300,
-      "miniaturaLargura": 211,
-      "miniaturaAltura": 47
+      "fundoAltura": 1300
     },
     {
       "id": "nirvana",
