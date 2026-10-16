@@ -18,7 +18,7 @@
     {
       "id": "cave",
       "nome": "Cave",
-      "ladoA": "mapas/Cave.webp",
+      "ladoA": "mapas/Cave A.webp",
       "fundo": "mapas/Cave Fundo.webp",
       "miniaturaA": "mapas/Cave Mini A.webp",
       "largura": 1800,
